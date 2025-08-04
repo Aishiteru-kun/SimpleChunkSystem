@@ -1,0 +1,15 @@
+/Saved
+/Intermediate
+/DerivedDataCache
+/Binaries
+/Build
+/Builds
+.vs
+/*.sln
+/.idea
+
+// Rider DotSetting configuration
+*.user
+
+Plugins/**/Binaries/
+Plugins/**/Intermediate/
