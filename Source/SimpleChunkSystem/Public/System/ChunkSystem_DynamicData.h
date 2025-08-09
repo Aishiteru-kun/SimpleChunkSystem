@@ -16,7 +16,7 @@ public:
 	explicit FChunkSystem_DynamicData(const UObject* InWorldContext, const int32 InChunkSize = 15)
 		: FChunkSystemBase<FChunk_DynamicData, bIsSerialize, FuncConv>(InWorldContext, InChunkSize)
 	{
-		SCHUNK_LOG(LogSChunkSystemLocal, Log, TEXT("FChunkSystem initialized with chunk size %d"), InChunkSize);
+		SCHUNK_LOG(LogSChunkSystemLocal_DynamicData, Log, TEXT("FChunkSystem initialized with chunk size %d"), InChunkSize);
 	}
 
 public:
@@ -83,7 +83,7 @@ public:
 		const FIntPoint ChunkPoint = this->ConvertGlobalToChunkGrid(InGridLocation);
 		if (!this->Chunks.Contains(ChunkPoint))
 		{
-			SCHUNK_LOG(LogSChunkSystemLocal, Warning, TEXT("Chunk does not exist at %s"), *ChunkPoint.ToString());
+			SCHUNK_LOG(LogSChunkSystemLocal_DynamicData, Warning, TEXT("Chunk does not exist at %s"), *ChunkPoint.ToString());
 			return false;
 		}
 
@@ -114,7 +114,7 @@ public:
 
 			if (!this->Chunks.Contains(ChunkPoint))
 			{
-				SCHUNK_LOG(LogSChunkSystemLocal, Warning, TEXT("Chunk does not exist at %s"), *ChunkPoint.ToString());
+				SCHUNK_LOG(LogSChunkSystemLocal_DynamicData, Warning, TEXT("Chunk does not exist at %s"), *ChunkPoint.ToString());
 				continue;
 			}
 
@@ -164,7 +164,7 @@ public:
 
 			if (!this->Chunks.Contains(ChunkPoint))
 			{
-				SCHUNK_LOG(LogSChunkSystemLocal, Warning, TEXT("Chunk does not exist at %s"), *ChunkPoint.ToString());
+				SCHUNK_LOG(LogSChunkSystemLocal_DynamicData, Warning, TEXT("Chunk does not exist at %s"), *ChunkPoint.ToString());
 				return false;
 			}
 
