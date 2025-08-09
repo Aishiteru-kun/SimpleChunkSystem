@@ -3,7 +3,7 @@
 
 #include "Manager/ChunkManagerBase.h"
 
-void UChunkManagerBase::Intitialize(const FChunkInitParameters& Params)
+void UChunkManagerBase::Initialize(const FChunkInitParameters& Params)
 {
 	StoredParams = Params;
 

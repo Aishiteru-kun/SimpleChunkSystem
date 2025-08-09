@@ -3,11 +3,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "System/ChunkSystem.h"
 #include "UObject/NoExportTypes.h"
 #include "ChunkManagerBase.generated.h"
-
-class FChunkSystem;
 
 USTRUCT(BlueprintType)
 struct FChunkInitParameters
@@ -28,7 +25,7 @@ class SIMPLECHUNKSYSTEM_API UChunkManagerBase : public UObject
 
 public:
 	UFUNCTION(BlueprintCallable, Category = "Chunk System")
-	virtual void Intitialize(const FChunkInitParameters& Params);
+	virtual void Initialize(const FChunkInitParameters& Params);
 
 	UFUNCTION(BlueprintCallable, Category = "Chunk System")
 	const FChunkInitParameters& GetParameters() const { return StoredParams; }

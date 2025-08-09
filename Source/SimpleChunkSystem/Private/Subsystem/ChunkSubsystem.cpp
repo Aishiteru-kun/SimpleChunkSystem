@@ -33,7 +33,7 @@ UChunkManagerBase* UChunkSubsystem::CreateChunkManager(const FName Key, const TS
 		return nullptr;
 	}
 
-	NewManager->Intitialize(Params);
+	NewManager->Initialize(Params);
 	ChunkManagers.Emplace(Key, NewManager);
 
 	SCHUNK_LOG(LogSChunkSubsystemLocal, Log, TEXT("Created chunk manager with key '%s'."), *Key.ToString());
