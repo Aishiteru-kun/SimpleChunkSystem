@@ -237,7 +237,7 @@ FORCEINLINE bool FChunk_ChunkSystem_Serialize::RunTest(const FString& Parameters
 	FChunkSystem* ChunkSystem = new FChunkSystem(World, ChunkSize);
 	TestTrue(TEXT("ChunkSystem is valid"), ChunkSystem != nullptr);
 
-		const FVector TestChannel_Location = FVector(1000, 2000, 3000);
+	const FVector TestChannel_Location = FVector(1000, 2000, 3000);
 	const FName TestChannel_ChannelName = TEXT("TestChannel");
 	const int32 TestChannel_Value = 42;
 

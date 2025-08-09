@@ -324,11 +324,11 @@ public:
 			const FIntPoint& ChunkPoint = ChunkToGrid.Key;
 			const TSet<FIntPoint>& GridPoints = ChunkToGrid.Value;
 
-                        if (!Chunks.Contains(ChunkPoint))
-                        {
-                                SCHUNK_LOG(LogSChunkSystemLocal, Warning, TEXT("Chunk does not exist at %s"), *ChunkPoint.ToString());
-                                continue;
-                        }
+			if (!Chunks.Contains(ChunkPoint))
+			{
+				SCHUNK_LOG(LogSChunkSystemLocal, Warning, TEXT("Chunk does not exist at %s"), *ChunkPoint.ToString());
+				continue;
+			}
 
 			for (const FIntPoint& Point : GridPoints)
 			{
