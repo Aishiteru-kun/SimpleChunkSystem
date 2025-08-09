@@ -165,7 +165,7 @@ public:
 			if (!this->Chunks.Contains(ChunkPoint))
 			{
 				SCHUNK_LOG(LogSChunkSystemLocal, Warning, TEXT("Chunk does not exist at %s"), *ChunkPoint.ToString());
-				continue;
+				return false;
 			}
 
 			for (const FIntPoint& Point : GridPoints)
