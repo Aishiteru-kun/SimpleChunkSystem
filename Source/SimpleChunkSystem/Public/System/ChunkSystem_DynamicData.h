@@ -1,7 +1,7 @@
 ﻿#pragma once
-#include "ChunkLogCategory.h"
+
 #include "ChunkSystem.h"
-#include "Library/ChunkBlueprintFunctionLibrary.h"
+#include "Chunk/Chunk_DynamicData.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogSChunkSystemLocal_DynamicData, Log, All)
 

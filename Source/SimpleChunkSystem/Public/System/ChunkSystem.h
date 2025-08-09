@@ -12,6 +12,17 @@ DEFINE_LOG_CATEGORY_STATIC(LogSChunkSystemLocal, Log, All)
 
 using FConvertWorldToGrid = FIntPoint(*)(const UObject*, const FVector&);
 
+/**
+ * Template base class that manages a collection of chunks.
+ *
+ * The system is responsible for translating world positions to chunk
+ * coordinates, creating and removing chunks and handling their
+ * serialization.
+ *
+ * @tparam Type               Chunk class stored inside the system. Must derive from FChunkBase.
+ * @tparam bIsSerialize       Enables or disables serialization support.
+ * @tparam FuncConv           Function used to convert world locations to grid coordinates.
+ */
 template <typename Type, bool bIsSerialize = true, FConvertWorldToGrid FuncConv =
 	          UChunkBlueprintFunctionLibrary::ConvertGlobalLocationToGrid>
 class SIMPLECHUNKSYSTEM_API FChunkSystemBase

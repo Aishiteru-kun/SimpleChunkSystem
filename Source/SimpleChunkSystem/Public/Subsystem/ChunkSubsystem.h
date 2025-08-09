@@ -11,6 +11,12 @@ class UChunkManagerBase;
 
 DEFINE_LOG_CATEGORY_STATIC(LogSChunkSubsystemLocal, Log, All)
 
+/**
+ * Game instance subsystem that owns and manages chunk managers.
+ *
+ * The subsystem provides Blueprint accessible functions to create, retrieve
+ * and remove chunk managers identified by a key.
+ */
 UCLASS()
 class SIMPLECHUNKSYSTEM_API UChunkSubsystem : public UGameInstanceSubsystem
 {
