@@ -7,7 +7,7 @@
 #include "ChunkSystemTypes_UnitTest.h"
 #include "Misc/AutomationTest.h"
 #include "Serialization/ObjectAndNameAsStringProxyArchive.h"
-#include "System/ChunkSystem.h"
+#include "System/ChunkSystem_DynamicData.h"
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FChunk_DivFloorTest,
                                  "SimpleChunkSystem.Math.DivFloor",
@@ -79,7 +79,7 @@ FORCEINLINE bool FChunk_ChunkSystem_DynamicDataTest::RunTest(const FString& Para
 	}
 
 	constexpr int32 ChunkSize = 7;
-	FChunkSystem* ChunkSystem = new FChunkSystem(World, ChunkSize);
+	FChunkSystem_DynamicData<>* ChunkSystem = new FChunkSystem_DynamicData(World, ChunkSize);
 	TestTrue(TEXT("ChunkSystem is valid"), ChunkSystem != nullptr);
 
 	const FVector TestChannel_Location = FVector(1000, 2000, 3000);
@@ -234,10 +234,10 @@ FORCEINLINE bool FChunk_ChunkSystem_Serialize::RunTest(const FString& Parameters
 	}
 
 	constexpr int32 ChunkSize = 1;
-	FChunkSystem* ChunkSystem = new FChunkSystem(World, ChunkSize);
+	FChunkSystem_DynamicData<>* ChunkSystem = new FChunkSystem_DynamicData(World, ChunkSize);
 	TestTrue(TEXT("ChunkSystem is valid"), ChunkSystem != nullptr);
 
-		const FVector TestChannel_Location = FVector(1000, 2000, 3000);
+	const FVector TestChannel_Location = FVector(1000, 2000, 3000);
 	const FName TestChannel_ChannelName = TEXT("TestChannel");
 	const int32 TestChannel_Value = 42;
 
@@ -302,7 +302,7 @@ FORCEINLINE bool FChunk_ChunkSystem_Serialize::RunTest(const FString& Parameters
 
 	delete ChunkSystem;
 
-	ChunkSystem = new FChunkSystem(World, ChunkSize);
+	ChunkSystem = new FChunkSystem_DynamicData(World, ChunkSize);
 	TestTrue(TEXT("ChunkSystem is valid after re-creation"), ChunkSystem != nullptr);
 
 	FMemoryReader MemoryReader(SerializedData, true);

@@ -24,11 +24,47 @@ public:
 		}
 
 		const FIntVector Origin = !InWorldContext || !InWorldContext->GetWorld() ? InWorldContext->GetWorld()->OriginLocation : FIntVector::ZeroValue;
-		constexpr double ChunkSize = 1000.0;
+		const double CellSize = GetCellSize();
 
-		const int32 X = FMath::FloorToInt((InGlobalLocation.X - Origin.X) / ChunkSize);
-		const int32 Y = FMath::FloorToInt((InGlobalLocation.Y - Origin.Y) / ChunkSize);
+		const int32 X = FMath::FloorToInt((InGlobalLocation.X - Origin.X) / CellSize);
+		const int32 Y = FMath::FloorToInt((InGlobalLocation.Y - Origin.Y) / CellSize);
 
 		return FIntPoint(X, Y);
 	}
+
+	UFUNCTION(BlueprintCallable, Category = "ChunkSystem")
+	static FVector2D ConvertGridToGlobalLocation(const UObject* InWorldContext, const FIntPoint& InGridPoint)
+	{
+		if (!InWorldContext || !InWorldContext->GetWorld())
+		{
+			SCHUNK_LOG(LogChunkLibrary, Warning, TEXT("Invalid world context provided."));
+			return FVector2D::ZeroVector;
+		}
+
+		const FIntVector Origin = !InWorldContext || !InWorldContext->GetWorld() ? InWorldContext->GetWorld()->OriginLocation : FIntVector::ZeroValue;
+		const double CellSize = GetCellSize();
+
+		const float X = Origin.X + InGridPoint.X * CellSize;
+		const float Y = Origin.Y + InGridPoint.Y * CellSize;
+
+		return FVector2D(X, Y);
+	}
+
+	UFUNCTION(BlueprintCallable, Category = "ChunkSystem")
+	static FVector2D ConvertGridToGlobalLocationAtCenter(const UObject* InWorldContext, const FIntPoint& InGridPoint)
+	{
+		if (!InWorldContext || !InWorldContext->GetWorld())
+		{
+			SCHUNK_LOG(LogChunkLibrary, Warning, TEXT("Invalid world context provided."));
+			return FVector2D::ZeroVector;
+		}
+
+		const FVector2D Location = ConvertGridToGlobalLocation(InWorldContext, InGridPoint);
+		const double CellSize = GetCellSize();
+
+		return Location + FVector2D(CellSize / 2.0, CellSize / 2.0);
+	}
+
+	UFUNCTION(BlueprintCallable, Category = "ChunkSystem")
+	static double GetCellSize() { return 1000.0; }
 };

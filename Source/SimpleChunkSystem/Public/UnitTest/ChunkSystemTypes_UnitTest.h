@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
-#include "System/Chunk/ChunkBase.h"
+#include "System/Chunk/Chunk_DynamicData.h"
 #include "ChunkSystemTypes_UnitTest.generated.h"
 
 USTRUCT()
