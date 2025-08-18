@@ -3,9 +3,343 @@
 
 #include "Manager/ChunkManager_DynamicData.h"
 
-void UChunkManager_DynamicData::Initialize(const FChunkInitParameters& Params)
+bool FChunkData_ObjectInfo::Serialize(FArchive& Ar)
 {
-	Super::Initialize(Params);
+	Super::Serialize(Ar);
+
+	// The serialising object is not included in this example.
+	// For example serialize the object reference by UID and search for it later.
+
+	return true;
+}
+
+FArchive& operator<<(FArchive& Ar, FChunkData_ObjectInfo& Data)
+{
+	Data.Serialize(Ar);
+	return Ar;
+}
+
+void UChunkManager_DynamicData::SetChannelDataByLocation(const FName InChannelName, const FVector InLocation,
+                                                         const FInstancedStruct& InCellData) const
+{
+	if (!ChunkSystem_DynamicData)
+	{
+		SCHUNK_LOG(LogSChunkManager_DynamicData, Warning, TEXT("Chunk system not initialized."));
+		return;
+	}
+
+	if (!InCellData.IsValid())
+	{
+		SCHUNK_LOG(LogSChunkManager_DynamicData, Warning, TEXT("Invalid CellData provided."));
+		return;
+	}
+
+	UScriptStruct* MutableStructType = const_cast<UScriptStruct*>(InCellData.GetScriptStruct());
+	if (!MutableStructType || !MutableStructType->IsChildOf(FCellBaseInfo::StaticStruct()))
+	{
+		SCHUNK_LOG(LogSChunkManager_DynamicData, Warning, TEXT("Provided CellData is not derived from FCellBaseInfo."));
+		return;
+	}
+
+	FInstancedStruct& Target = ChunkSystem_DynamicData->FindOrAddChannel(InChannelName, InLocation, MutableStructType);
+	Target = InCellData;
+}
+
+void UChunkManager_DynamicData::SetChannelDataByGridPoint(const FName InChannelName, const FIntPoint InGridPoint,
+                                                          const FInstancedStruct& InCellData) const
+{
+	if (!ChunkSystem_DynamicData)
+	{
+		SCHUNK_LOG(LogSChunkManager_DynamicData, Warning, TEXT("Chunk system not initialized."));
+		return;
+	}
+
+	if (!InCellData.IsValid())
+	{
+		SCHUNK_LOG(LogSChunkManager_DynamicData, Warning, TEXT("Invalid CellData provided."));
+		return;
+	}
+
+	UScriptStruct* MutableStructType = const_cast<UScriptStruct*>(InCellData.GetScriptStruct());
+	if (!MutableStructType || !MutableStructType->IsChildOf(FCellBaseInfo::StaticStruct()))
+	{
+		SCHUNK_LOG(LogSChunkManager_DynamicData, Warning, TEXT("Provided CellData is not derived from FCellBaseInfo."));
+		return;
+	}
+
+	FInstancedStruct& Target = ChunkSystem_DynamicData->FindOrAddChannel(InChannelName, InGridPoint, MutableStructType);
+	Target = InCellData;
+}
+
+FInstancedStruct UChunkManager_DynamicData::GetChannelDataByLocation(const FName InChannelName,
+                                                                     const FVector InLocation,
+                                                                     UScriptStruct* InExpectedStruct) const
+{
+	if (!ChunkSystem_DynamicData)
+	{
+		SCHUNK_LOG(LogSChunkManager_DynamicData, Warning, TEXT("Chunk system not initialized."));
+		return FInstancedStruct();
+	}
+
+	if (!InExpectedStruct || !InExpectedStruct->IsChildOf(FCellBaseInfo::StaticStruct()))
+	{
+		SCHUNK_LOG(LogSChunkManager_DynamicData, Warning, TEXT("Invalid ExpectedType provided."));
+		return FInstancedStruct();
+	}
+
+	return ChunkSystem_DynamicData->FindOrAddChannel(InChannelName, InLocation, InExpectedStruct);
+}
+
+FInstancedStruct UChunkManager_DynamicData::GetChannelDataByGridPoint(const FName InChannelName,
+                                                                      const FIntPoint InGridPoint,
+                                                                      UScriptStruct* InExpectedStruct) const
+{
+	if (!ChunkSystem_DynamicData)
+	{
+		SCHUNK_LOG(LogSChunkManager_DynamicData, Warning, TEXT("Chunk system not initialized."));
+		return FInstancedStruct();
+	}
+
+	if (!InExpectedStruct || !InExpectedStruct->IsChildOf(FCellBaseInfo::StaticStruct()))
+	{
+		SCHUNK_LOG(LogSChunkManager_DynamicData, Warning, TEXT("Invalid ExpectedType provided."));
+		return FInstancedStruct();
+	}
+
+	return ChunkSystem_DynamicData->FindOrAddChannel(InChannelName, InGridPoint, InExpectedStruct);
+}
+
+TArray<FInstancedStruct> UChunkManager_DynamicData::GetChannelDataByLocations(const FName InChannelName,
+                                                                              const TSet<FVector>& InLocations,
+                                                                              UScriptStruct* InExpectedStruct) const
+{
+	if (!ChunkSystem_DynamicData)
+	{
+		SCHUNK_LOG(LogSChunkManager_DynamicData, Warning, TEXT("Chunk system not initialized."));
+		return TArray<FInstancedStruct>();
+	}
+
+	if (!InExpectedStruct || !InExpectedStruct->IsChildOf(FCellBaseInfo::StaticStruct()))
+	{
+		SCHUNK_LOG(LogSChunkManager_DynamicData, Warning, TEXT("Invalid ExpectedType provided."));
+		return TArray<FInstancedStruct>();
+	}
+
+	if (InLocations.IsEmpty())
+	{
+		SCHUNK_LOG(LogSChunkManager_DynamicData, Warning, TEXT("No locations provided."));
+		return TArray<FInstancedStruct>();
+	}
+
+	TArray<FInstancedStruct> Results;
+	Algo::Transform(ChunkSystem_DynamicData->FindOrAddChannels(InChannelName, InLocations, InExpectedStruct), Results,
+	                [](const FInstancedStruct* InData)
+	                {
+		                return *InData;
+	                });
+
+	return Results;
+}
+
+TArray<FInstancedStruct> UChunkManager_DynamicData::GetChannelDataByGridPoints(const FName InChannelName,
+                                                                               const TSet<FIntPoint>& InGridPoint,
+                                                                               UScriptStruct* InExpectedStruct) const
+{
+	if (!ChunkSystem_DynamicData)
+	{
+		SCHUNK_LOG(LogSChunkManager_DynamicData, Warning, TEXT("Chunk system not initialized."));
+		return TArray<FInstancedStruct>();
+	}
+
+	if (!InExpectedStruct || !InExpectedStruct->IsChildOf(FCellBaseInfo::StaticStruct()))
+	{
+		SCHUNK_LOG(LogSChunkManager_DynamicData, Warning, TEXT("Invalid ExpectedType provided."));
+		return TArray<FInstancedStruct>();
+	}
+
+	if (InGridPoint.IsEmpty())
+	{
+		SCHUNK_LOG(LogSChunkManager_DynamicData, Warning, TEXT("No grid points provided."));
+		return TArray<FInstancedStruct>();
+	}
+
+	TArray<FInstancedStruct> Results;
+	Algo::Transform(ChunkSystem_DynamicData->FindOrAddChannels(InChannelName, InGridPoint, InExpectedStruct), Results,
+	                [](const FInstancedStruct* InData)
+	                {
+		                return *InData;
+	                });
+
+	return Results;
+}
+
+bool UChunkManager_DynamicData::TryRemoveChannelByLocation(const FName InChannelName, const FVector InLocation,
+                                                           UScriptStruct* InExpectedStruct) const
+{
+	if (!ChunkSystem_DynamicData)
+	{
+		SCHUNK_LOG(LogSChunkManager_DynamicData, Warning, TEXT("Chunk system not initialized."));
+		return false;
+	}
+
+	if (!InExpectedStruct || !InExpectedStruct->IsChildOf(FCellBaseInfo::StaticStruct()))
+	{
+		SCHUNK_LOG(LogSChunkManager_DynamicData, Warning, TEXT("Invalid ExpectedType provided."));
+		return false;
+	}
+
+	return ChunkSystem_DynamicData->TryRemoveChannel(InChannelName, InLocation, InExpectedStruct);
+}
+
+bool UChunkManager_DynamicData::TryRemoveChannelByGridPoint(const FName InChannelName, const FIntPoint InGridPoint,
+                                                            UScriptStruct* InExpectedStruct) const
+{
+	if (!ChunkSystem_DynamicData)
+	{
+		SCHUNK_LOG(LogSChunkManager_DynamicData, Warning, TEXT("Chunk system not initialized."));
+		return false;
+	}
+
+	if (!InExpectedStruct || !InExpectedStruct->IsChildOf(FCellBaseInfo::StaticStruct()))
+	{
+		SCHUNK_LOG(LogSChunkManager_DynamicData, Warning, TEXT("Invalid ExpectedType provided."));
+		return false;
+	}
+
+	return ChunkSystem_DynamicData->TryRemoveChannel(InChannelName, InGridPoint, InExpectedStruct);
+}
+
+bool UChunkManager_DynamicData::TryRemoveChannelByLocations(const FName InChannelName, const TSet<FVector>& InLocations,
+                                                            UScriptStruct* InExpectedStruct) const
+{
+	if (!ChunkSystem_DynamicData)
+	{
+		SCHUNK_LOG(LogSChunkManager_DynamicData, Warning, TEXT("Chunk system not initialized."));
+		return false;
+	}
+
+	if (!InExpectedStruct || !InExpectedStruct->IsChildOf(FCellBaseInfo::StaticStruct()))
+	{
+		SCHUNK_LOG(LogSChunkManager_DynamicData, Warning, TEXT("Invalid ExpectedType provided."));
+		return false;
+	}
+
+	if (InLocations.IsEmpty())
+	{
+		SCHUNK_LOG(LogSChunkManager_DynamicData, Warning, TEXT("No locations provided."));
+		return false;
+	}
+
+	return ChunkSystem_DynamicData->TryRemoveChannels(InChannelName, InLocations, InExpectedStruct);
+}
+
+bool UChunkManager_DynamicData::TryRemoveChannelByGridPoints(const FName InChannelName,
+                                                             const TSet<FIntPoint>& InGridPoint,
+                                                             UScriptStruct* InExpectedStruct) const
+{
+	if (!ChunkSystem_DynamicData)
+	{
+		SCHUNK_LOG(LogSChunkManager_DynamicData, Warning, TEXT("Chunk system not initialized."));
+		return false;
+	}
+
+	if (!InExpectedStruct || !InExpectedStruct->IsChildOf(FCellBaseInfo::StaticStruct()))
+	{
+		SCHUNK_LOG(LogSChunkManager_DynamicData, Warning, TEXT("Invalid ExpectedType provided."));
+		return false;
+	}
+
+	if (InGridPoint.IsEmpty())
+	{
+		SCHUNK_LOG(LogSChunkManager_DynamicData, Warning, TEXT("No grid points provided."));
+		return false;
+	}
+
+	return ChunkSystem_DynamicData->TryRemoveChannels(InChannelName, InGridPoint, InExpectedStruct);
+}
+
+bool UChunkManager_DynamicData::HasChannelByLocation(const FName InChannelName, const FVector InLocation,
+                                                     UScriptStruct* InExpectedStruct) const
+{
+	if (!ChunkSystem_DynamicData)
+	{
+		SCHUNK_LOG(LogSChunkManager_DynamicData, Warning, TEXT("Chunk system not initialized."));
+		return false;
+	}
+
+	if (!InExpectedStruct || !InExpectedStruct->IsChildOf(FCellBaseInfo::StaticStruct()))
+	{
+		SCHUNK_LOG(LogSChunkManager_DynamicData, Warning, TEXT("Invalid ExpectedType provided."));
+		return false;
+	}
+
+	return ChunkSystem_DynamicData->HasChannel(InChannelName, InLocation, InExpectedStruct);
+}
+
+bool UChunkManager_DynamicData::HasChannelByGridPoint(const FName InChannelName, const FIntPoint InGridPoint,
+                                                      UScriptStruct* InExpectedStruct) const
+{
+	if (!ChunkSystem_DynamicData)
+	{
+		SCHUNK_LOG(LogSChunkManager_DynamicData, Warning, TEXT("Chunk system not initialized."));
+		return false;
+	}
+
+	if (!InExpectedStruct || !InExpectedStruct->IsChildOf(FCellBaseInfo::StaticStruct()))
+	{
+		SCHUNK_LOG(LogSChunkManager_DynamicData, Warning, TEXT("Invalid ExpectedType provided."));
+		return false;
+	}
+
+	return ChunkSystem_DynamicData->HasChannel(InChannelName, InGridPoint, InExpectedStruct);
+}
+
+bool UChunkManager_DynamicData::HasChannelByLocations(const FName InChannelName, const TSet<FVector>& InLocations,
+                                                      UScriptStruct* InExpectedStruct) const
+{
+	if (!ChunkSystem_DynamicData)
+	{
+		SCHUNK_LOG(LogSChunkManager_DynamicData, Warning, TEXT("Chunk system not initialized."));
+		return false;
+	}
+
+	if (!InExpectedStruct || !InExpectedStruct->IsChildOf(FCellBaseInfo::StaticStruct()))
+	{
+		SCHUNK_LOG(LogSChunkManager_DynamicData, Warning, TEXT("Invalid ExpectedType provided."));
+		return false;
+	}
+
+	if (InLocations.IsEmpty())
+	{
+		SCHUNK_LOG(LogSChunkManager_DynamicData, Warning, TEXT("No locations provided."));
+		return false;
+	}
+
+	return ChunkSystem_DynamicData->HasChannels(InChannelName, InLocations, InExpectedStruct);
+}
+
+bool UChunkManager_DynamicData::HasChannelByGridPoints(const FName InChannelName, const TSet<FIntPoint>& InGridPoint,
+                                                       UScriptStruct* InExpectedStruct) const
+{
+	if (!ChunkSystem_DynamicData)
+	{
+		SCHUNK_LOG(LogSChunkManager_DynamicData, Warning, TEXT("Chunk system not initialized."));
+		return false;
+	}
+
+	if (!InExpectedStruct || !InExpectedStruct->IsChildOf(FCellBaseInfo::StaticStruct()))
+	{
+		SCHUNK_LOG(LogSChunkManager_DynamicData, Warning, TEXT("Invalid ExpectedType provided."));
+		return false;
+	}
+
+	if (InGridPoint.IsEmpty())
+	{
+		SCHUNK_LOG(LogSChunkManager_DynamicData, Warning, TEXT("No grid points provided."));
+		return false;
+	}
+
+	return ChunkSystem_DynamicData->HasChannels(InChannelName, InGridPoint, InExpectedStruct);
 }
 
 void UChunkManager_DynamicData::CreateChunkSystem()
@@ -20,5 +354,4 @@ void UChunkManager_DynamicData::CreateChunkSystem()
 
 void UChunkManager_DynamicData::OnInitialized()
 {
-	
 }
