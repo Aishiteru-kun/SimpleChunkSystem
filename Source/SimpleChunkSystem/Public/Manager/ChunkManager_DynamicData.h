@@ -7,11 +7,18 @@
 #include "System/ChunkSystem_DynamicData.h"
 #include "ChunkManager_DynamicData.generated.h"
 
+/**
+ * Minimal cell info that stores an object reference.
+ *
+ * Used by dynamic data channels to keep track of arbitrary UObject instances
+ * assigned to specific cells inside a chunk.
+ */
 USTRUCT(BlueprintType)
 struct FChunkData_ObjectInfo : public FCellBaseInfo
 {
 	GENERATED_BODY()
 
+	/** UObject stored in the cell. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Chunk Data")
 	TObjectPtr<UObject> Object;
 
@@ -22,6 +29,12 @@ struct FChunkData_ObjectInfo : public FCellBaseInfo
 
 DEFINE_LOG_CATEGORY_STATIC(LogSChunkManager_DynamicData, Log, All)
 
+/**
+ * Chunk manager that operates on chunks containing dynamic per-cell data.
+ *
+ * Provides Blueprint accessors for manipulating data channels identified by
+ * name at both world locations and grid coordinates.
+ */
 UCLASS()
 class SIMPLECHUNKSYSTEM_API UChunkManager_DynamicData : public UChunkManagerBase
 {

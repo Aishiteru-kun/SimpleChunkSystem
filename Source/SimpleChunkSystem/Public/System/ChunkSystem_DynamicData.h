@@ -5,6 +5,13 @@
 
 DEFINE_LOG_CATEGORY_STATIC(LogSChunkSystemLocal_DynamicData, Log, All)
 
+/**
+ * Chunk system that stores arbitrary structured data in channels on a per-cell
+ * basis.
+ *
+ * The system extends the generic chunk system with helpers for finding,
+ * creating and removing data channels identified by name.
+ */
 template <bool bIsSerialize = true, FConvertWorldToGrid FuncConv = UChunkBlueprintFunctionLibrary::ConvertGlobalLocationToGrid>
 class SIMPLECHUNKSYSTEM_API FChunkSystem_DynamicData final : public FChunkSystemBase<FChunk_DynamicData, bIsSerialize, FuncConv>
 {
