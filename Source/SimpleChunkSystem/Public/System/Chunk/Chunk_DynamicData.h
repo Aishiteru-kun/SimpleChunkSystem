@@ -73,6 +73,24 @@ public:
 		return *OptStruct;
 	}
 
+	FORCEINLINE FInstancedStruct& GetOrAddChannel(const FName Name, UScriptStruct* Type)
+	{
+		const FCellChannelKey Key{Name, Type};
+		TOptional<FInstancedStruct>& OptStruct = Channels.FindOrAdd(Key);
+		if (!OptStruct.IsSet())
+		{
+			FInstancedStruct NewStruct;
+			NewStruct.InitializeAs(Type);
+
+			OptStruct = NewStruct;
+
+			SCHUNK_LOG(LogSChunkLocal, Log, TEXT("Added channel '%s' of type '%s'"),
+			           *Name.ToString(), *Key.Type->GetName());
+		}
+
+		return *OptStruct;
+	}
+
 	template <typename TStruct>
 	FORCEINLINE bool RemoveChannel(const FName Name)
 	{
@@ -89,10 +107,31 @@ public:
 		return true;
 	}
 
+	FORCEINLINE bool RemoveChannel(const FName Name, UScriptStruct* Type)
+	{
+		const FCellChannelKey Key{Name, Type};
+		if (!Channels.Contains(Key))
+		{
+			return false;
+		}
+
+		SCHUNK_LOG(LogSChunkLocal, Log, TEXT("Removed channel '%s' of type '%s'"),
+		           *Name.ToString(), *Key.Type->GetName());
+
+		Channels.Remove(Key);
+		return true;
+	}
+
 	template <typename TStruct>
 	FORCEINLINE bool HasChannel(const FName Name) const
 	{
 		const FCellChannelKey Key{Name, TStruct::StaticStruct()};
+		return Channels.Contains(Key);
+	}
+
+	FORCEINLINE bool HasChannel(const FName Name, UScriptStruct* Type) const
+	{
+		const FCellChannelKey Key{Name, Type};
 		return Channels.Contains(Key);
 	}
 
@@ -123,16 +162,31 @@ public:
 		return Cells[InCellPoint].GetOrAddChannel<TStruct>(Name);
 	}
 
+	FORCEINLINE FInstancedStruct& FindOrAddChannel(const FName Name, const FIntPoint& InCellPoint, UScriptStruct* Type)
+	{
+		return Cells[InCellPoint].GetOrAddChannel(Name, Type);
+	}
+
 	template <typename TStruct>
 	FORCEINLINE bool TryRemoveChannel(const FName Name, const FIntPoint& InCellPoint)
 	{
 		return Cells[InCellPoint].RemoveChannel<TStruct>(Name);
 	}
 
+	FORCEINLINE bool TryRemoveChannel(const FName Name, const FIntPoint& InCellPoint, UScriptStruct* Type)
+	{
+		return Cells[InCellPoint].RemoveChannel(Name, Type);
+	}
+
 	template <typename TStruct>
 	FORCEINLINE bool HasChannel(const FName Name, const FIntPoint& InCellPoint) const
 	{
 		return Cells[InCellPoint].HasChannel<TStruct>(Name);
+	}
+
+	FORCEINLINE bool HasChannel(const FName Name, const FIntPoint& InCellPoint, UScriptStruct* Type) const
+	{
+		return Cells[InCellPoint].HasChannel(Name, Type);
 	}
 
 private:
