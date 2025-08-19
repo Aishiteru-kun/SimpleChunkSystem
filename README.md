@@ -1,6 +1,6 @@
 # SimpleChunkSystem
 
-SimpleChunkSystem is a lightweight Unreal Engine plugin that provides a basic framework for grid-based world streaming and chunk management. It exposes a set of C++ classes and Blueprint nodes that make it easy to create and manipulate chunks of the game world.
+SimpleChunkSystem is a Unreal Engine plugin that provides a basic framework for grid-based chunk management. It exposes a set of C++ classes and Blueprint nodes that make it easy to create and manipulate chunks of the game world.
 
 ## Features
 - **ChunkSubsystem** – a `GameInstance` subsystem that lets you create and manage chunk managers keyed by name.
