@@ -207,6 +207,67 @@ FORCEINLINE bool FChunk_ChunkSystem_DynamicDataTest::RunTest(const FString& Para
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FChunk_ChunkSystem_DynamicDataTest_SameDataInOtherChannel,
+								 "SimpleChunkSystem.System.DynamicDataTest_SameDataInOtherChannel",
+								 EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+FORCEINLINE bool FChunk_ChunkSystem_DynamicDataTest_SameDataInOtherChannel::RunTest(const FString& Parameters)
+{
+	TestNotNull(TEXT("GEngine is valid"), GEngine);
+	if (!GEngine)
+	{
+		return false;
+	}
+
+	const TIndirectArray<FWorldContext>& Contexts = GEngine->GetWorldContexts();
+	TestTrue(TEXT("Contexts are valid"), !Contexts.IsEmpty());
+	if (Contexts.IsEmpty())
+	{
+		return false;
+	}
+
+	const UWorld* World = Contexts[0].World();
+	TestNotNull(TEXT("World is valid"), World);
+	if (!World)
+	{
+		return false;
+	}
+
+	constexpr int32 ChunkSize = 1;
+	FChunkSystem_DynamicData<>* ChunkSystem = new FChunkSystem_DynamicData(World, ChunkSize);
+	TestTrue(TEXT("ChunkSystem is valid"), ChunkSystem != nullptr);
+
+	const FVector TestChannel_Location = FVector(1000, 2000, 3000);
+
+	const FName TestChannel_ChannelName = TEXT("TestChannel");
+	const int32 TestChannel_Value = 42;
+
+	const FName TestChannel_ChannelName2 = TEXT("TestChannel2");
+	const int32 TestChannel2_Value = 84;
+
+	ChunkSystem->FindOrAddChannel<FData_UnitTest>(TestChannel_ChannelName, TestChannel_Location).GetMutablePtr<FData_UnitTest>()->Value = TestChannel_Value;
+	ChunkSystem->FindOrAddChannel<FData_UnitTest>(TestChannel_ChannelName2, TestChannel_Location).GetMutablePtr<FData_UnitTest>()->Value = TestChannel2_Value;
+
+	TestTrue(TEXT("Has Channel FData_UnitTest"), ChunkSystem->HasChannel<FData_UnitTest>(TestChannel_ChannelName, TestChannel_Location));
+	TestTrue(TEXT("Has Channel FData_UnitTest in other channel"), ChunkSystem->HasChannel<FData_UnitTest>(TestChannel_ChannelName2, TestChannel_Location));
+
+	{
+		FInstancedStruct& Data = ChunkSystem->FindOrAddChannel<FData_UnitTest>(TestChannel_ChannelName, TestChannel_Location);
+		const FData_UnitTest* Data_Ptr = Data.GetPtr<FData_UnitTest>();
+		TestEqual(TEXT("Data Value"), Data_Ptr->Value, TestChannel_Value);
+	}
+
+	{
+		FInstancedStruct& Data_2 = ChunkSystem->FindOrAddChannel<FData_UnitTest>(TestChannel_ChannelName2, TestChannel_Location);
+		const FData_UnitTest* Data_2_Ptr = Data_2.GetPtr<FData_UnitTest>();
+		TestEqual(TEXT("Data Value in other channel"), Data_2_Ptr->Value, TestChannel2_Value);
+	}
+
+	delete ChunkSystem;
+
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FChunk_ChunkSystem_Serialize,
 								 "SimpleChunkSystem.System.Serialize",
 								 EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
