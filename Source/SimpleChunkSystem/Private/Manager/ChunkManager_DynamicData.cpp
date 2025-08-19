@@ -20,7 +20,7 @@ FArchive& operator<<(FArchive& Ar, FChunkData_ObjectInfo& Data)
 }
 
 void UChunkManager_DynamicData::SetChannelDataByLocation(const FName InChannelName, const FVector InLocation,
-                                                         const FInstancedStruct& InCellData) const
+                                                         const FInstancedStruct& InCellData)
 {
 	if (!ChunkSystem_DynamicData)
 	{
@@ -46,7 +46,7 @@ void UChunkManager_DynamicData::SetChannelDataByLocation(const FName InChannelNa
 }
 
 void UChunkManager_DynamicData::SetChannelDataByGridPoint(const FName InChannelName, const FIntPoint InGridPoint,
-                                                          const FInstancedStruct& InCellData) const
+                                                          const FInstancedStruct& InCellData)
 {
 	if (!ChunkSystem_DynamicData)
 	{
@@ -174,7 +174,7 @@ TArray<FInstancedStruct> UChunkManager_DynamicData::GetChannelDataByGridPoints(c
 }
 
 bool UChunkManager_DynamicData::TryRemoveChannelByLocation(const FName InChannelName, const FVector InLocation,
-                                                           UScriptStruct* InExpectedStruct) const
+                                                           UScriptStruct* InExpectedStruct)
 {
 	if (!ChunkSystem_DynamicData)
 	{
@@ -192,7 +192,7 @@ bool UChunkManager_DynamicData::TryRemoveChannelByLocation(const FName InChannel
 }
 
 bool UChunkManager_DynamicData::TryRemoveChannelByGridPoint(const FName InChannelName, const FIntPoint InGridPoint,
-                                                            UScriptStruct* InExpectedStruct) const
+                                                            UScriptStruct* InExpectedStruct)
 {
 	if (!ChunkSystem_DynamicData)
 	{
@@ -210,7 +210,7 @@ bool UChunkManager_DynamicData::TryRemoveChannelByGridPoint(const FName InChanne
 }
 
 bool UChunkManager_DynamicData::TryRemoveChannelByLocations(const FName InChannelName, const TSet<FVector>& InLocations,
-                                                            UScriptStruct* InExpectedStruct) const
+                                                            UScriptStruct* InExpectedStruct)
 {
 	if (!ChunkSystem_DynamicData)
 	{
@@ -235,7 +235,7 @@ bool UChunkManager_DynamicData::TryRemoveChannelByLocations(const FName InChanne
 
 bool UChunkManager_DynamicData::TryRemoveChannelByGridPoints(const FName InChannelName,
                                                              const TSet<FIntPoint>& InGridPoint,
-                                                             UScriptStruct* InExpectedStruct) const
+                                                             UScriptStruct* InExpectedStruct)
 {
 	if (!ChunkSystem_DynamicData)
 	{
