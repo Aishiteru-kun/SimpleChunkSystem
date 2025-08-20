@@ -48,10 +48,10 @@ public:
 	void SetChannelDataByGridPoint(const FName InChannelName, const FIntPoint InGridPoint, const FInstancedStruct& InCellData);
 
 	UFUNCTION(BlueprintCallable, Category = "Chunk Manager")
-	FInstancedStruct GetChannelDataByLocation(const FName InChannelName, const FVector InLocation, UScriptStruct* InExpectedStruct) const;
+	FInstancedStruct GetChannelDataByLocation(const FName InChannelName, const FVector InLocation, UScriptStruct* InExpectedStruct, bool& bFound) const;
 
 	UFUNCTION(BlueprintCallable, Category = "Chunk Manager")
-	FInstancedStruct GetChannelDataByGridPoint(const FName InChannelName, const FIntPoint InGridPoint, UScriptStruct* InExpectedStruct) const;
+	FInstancedStruct GetChannelDataByGridPoint(const FName InChannelName, const FIntPoint InGridPoint, UScriptStruct* InExpectedStruct, bool& bFound) const;
 
 	UFUNCTION(BlueprintCallable, Category = "Chunk Manager")
 	TArray<FInstancedStruct> GetChannelDataByLocations(const FName InChannelName, const TSet<FVector>& InLocations, UScriptStruct* InExpectedStruct) const;

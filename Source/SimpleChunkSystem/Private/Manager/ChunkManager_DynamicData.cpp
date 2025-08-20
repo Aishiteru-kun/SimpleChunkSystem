@@ -73,8 +73,11 @@ void UChunkManager_DynamicData::SetChannelDataByGridPoint(const FName InChannelN
 
 FInstancedStruct UChunkManager_DynamicData::GetChannelDataByLocation(const FName InChannelName,
                                                                      const FVector InLocation,
-                                                                     UScriptStruct* InExpectedStruct) const
+                                                                     UScriptStruct* InExpectedStruct,
+                                                                     bool& bFound) const
 {
+	bFound = false;
+
 	if (!ChunkSystem_DynamicData)
 	{
 		SCHUNK_LOG(LogSChunkManager_DynamicData, Warning, TEXT("Chunk system not initialized."));
@@ -87,13 +90,26 @@ FInstancedStruct UChunkManager_DynamicData::GetChannelDataByLocation(const FName
 		return FInstancedStruct();
 	}
 
-	return ChunkSystem_DynamicData->FindOrAddChannel(InChannelName, InLocation, InExpectedStruct);
+	FInstancedStruct* InstancedPtr = ChunkSystem_DynamicData->GetChannel(InChannelName, InLocation, InExpectedStruct);
+	if (!InstancedPtr)
+	{
+		SCHUNK_LOG(LogSChunkManager_DynamicData, Log,
+		         TEXT("Channel '%s' of type '%s' does not exist at location %s"),
+		         *InChannelName.ToString(), *InExpectedStruct->GetName(), *InLocation.ToString());
+		return FInstancedStruct();
+	}
+
+	bFound = true;
+	return *InstancedPtr;
 }
 
 FInstancedStruct UChunkManager_DynamicData::GetChannelDataByGridPoint(const FName InChannelName,
                                                                       const FIntPoint InGridPoint,
-                                                                      UScriptStruct* InExpectedStruct) const
+                                                                      UScriptStruct* InExpectedStruct,
+                                                                      bool& bFound) const
 {
+	bFound = false;
+
 	if (!ChunkSystem_DynamicData)
 	{
 		SCHUNK_LOG(LogSChunkManager_DynamicData, Warning, TEXT("Chunk system not initialized."));
@@ -106,7 +122,17 @@ FInstancedStruct UChunkManager_DynamicData::GetChannelDataByGridPoint(const FNam
 		return FInstancedStruct();
 	}
 
-	return ChunkSystem_DynamicData->FindOrAddChannel(InChannelName, InGridPoint, InExpectedStruct);
+	FInstancedStruct* InstancedPtr = ChunkSystem_DynamicData->GetChannel(InChannelName, InGridPoint, InExpectedStruct);
+	if (!InstancedPtr)
+	{
+		SCHUNK_LOG(LogSChunkManager_DynamicData, Log,
+				 TEXT("Channel '%s' of type '%s' does not exist at Point %s"),
+				 *InChannelName.ToString(), *InExpectedStruct->GetName(), *InGridPoint.ToString());
+		return FInstancedStruct();
+	}
+
+	bFound = true;
+	return *InstancedPtr;
 }
 
 TArray<FInstancedStruct> UChunkManager_DynamicData::GetChannelDataByLocations(const FName InChannelName,

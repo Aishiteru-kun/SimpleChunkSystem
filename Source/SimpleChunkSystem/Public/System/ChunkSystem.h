@@ -31,6 +31,8 @@ class SIMPLECHUNKSYSTEM_API FChunkSystemBase
 
 	friend class FChunk_DivFloorTest;
 
+	using FChunkPtr = TSharedPtr<Type, ESPMode::ThreadSafe>;
+
 protected:
 	TFunction<FIntPoint(const UObject*, const FVector&)> ConvertWorldToGridFunc = FuncConv;
 
@@ -79,19 +81,19 @@ public:
 				Type Value(FIntPoint::ZeroValue, FIntPoint::ZeroValue);
 				Value.Serialize(Ar);
 
-				Chunks.Add(Key, Value);
+				Chunks.Emplace(Key, MakeShared<Type, ESPMode::ThreadSafe>(Value));
 			}
 		}
 
 		if (Ar.IsSaving())
 		{
-			for (TPair<FIntPoint, Type>& Iter : Chunks)
+			for (TPair<FIntPoint, FChunkPtr>& Iter : Chunks)
 			{
 				FIntPoint Key = Iter.Key;
-				Type& Value = Iter.Value;
+				FChunkPtr& Value = Iter.Value;
 
 				Key.Serialize(Ar);
-				Value.Serialize(Ar);
+				Value.Get()->Serialize(Ar);
 			}
 		}
 	}
@@ -143,7 +145,7 @@ protected:
 		FIntPoint TopLeft, BottomRight;
 		GetChunkBounds(InChunkGridLocation, TopLeft, BottomRight);
 
-		Chunks.Emplace(InChunkGridLocation, Type(TopLeft, BottomRight));
+		Chunks.Emplace(InChunkGridLocation, MakeShared<Type, ESPMode::ThreadSafe>(TopLeft, BottomRight));
 		return true;
 	}
 
@@ -212,7 +214,7 @@ protected:
 	}
 
 protected:
-	TMap<FIntPoint, Type> Chunks;
+	TMap<FIntPoint, FChunkPtr> Chunks;
 
 private:
 	FORCEINLINE int32 DivFloor(const int32 Value, const int32 Divisor) const

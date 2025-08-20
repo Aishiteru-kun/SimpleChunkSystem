@@ -28,6 +28,60 @@ public:
 
 public:
 	template <typename TStruct>
+	FORCEINLINE FInstancedStruct* GetChannel(const FName Name, const FVector& InLocation)
+	{
+		const FIntPoint GridPoint = this->ConvertWorldToGridFunc(this->GetWorld(), InLocation);
+		return GetChannel<TStruct>(Name, GridPoint);
+	}
+
+	template <typename TStruct>
+	FORCEINLINE FInstancedStruct* GetChannel(const FName Name, const FIntPoint& InGridPoint)
+	{
+		const FIntPoint ChunkPoint = this->ConvertGlobalToChunkGrid(InGridPoint);
+		if (!this->Chunks.Contains(ChunkPoint))
+		{
+			SCHUNK_LOG(LogSChunkSystemLocal_DynamicData, Log, TEXT("Chunk does not exist at %s"),
+			           *ChunkPoint.ToString());
+			return nullptr;
+		}
+
+		if (!HasChannel<TStruct>(Name, InGridPoint))
+		{
+			SCHUNK_LOG(LogSChunkSystemLocal_DynamicData, Log, TEXT("Channel '%s' of type '%s' does not exist at %s"),
+			           *Name.ToString(), *TStruct::StaticStruct()->GetName(), *InGridPoint.ToString());
+			return nullptr;
+		}
+
+		return &this->Chunks[ChunkPoint]->FindOrAddChannel<TStruct>(Name, InGridPoint);
+	}
+
+	FORCEINLINE FInstancedStruct* GetChannel(const FName Name, const FVector& InLocation, UScriptStruct* Type)
+	{
+		const FIntPoint GridPoint = this->ConvertWorldToGridFunc(this->GetWorld(), InLocation);
+		return GetChannel(Name, GridPoint, Type);
+	}
+
+	FORCEINLINE FInstancedStruct* GetChannel(const FName Name, const FIntPoint& InGridPoint, UScriptStruct* Type)
+	{
+		const FIntPoint ChunkPoint = this->ConvertGlobalToChunkGrid(InGridPoint);
+		if (!this->Chunks.Contains(ChunkPoint))
+		{
+			SCHUNK_LOG(LogSChunkSystemLocal_DynamicData, Log, TEXT("Chunk does not exist at %s"),
+			           *ChunkPoint.ToString());
+			return nullptr;
+		}
+
+		if (!HasChannel(Name, InGridPoint, Type))
+		{
+			SCHUNK_LOG(LogSChunkSystemLocal_DynamicData, Log, TEXT("Channel '%s' of type '%s' does not exist at %s"),
+			           *Name.ToString(), *Type->GetName(), *InGridPoint.ToString());
+			return nullptr;
+		}
+
+		return &this->Chunks[ChunkPoint]->FindOrAddChannel(Name, InGridPoint, Type);
+	}
+
+	template <typename TStruct>
 	FORCEINLINE FInstancedStruct& FindOrAddChannel(const FName Name, const FVector& InLocation)
 	{
 		const FIntPoint GridPoint = this->ConvertWorldToGridFunc(this->GetWorld(), InLocation);
@@ -40,7 +94,7 @@ public:
 		const FIntPoint ChunkPoint = this->ConvertGlobalToChunkGrid(InGridPoint);
 		this->TryMakeChunk(ChunkPoint);
 
-		return this->Chunks[ChunkPoint].FindOrAddChannel<TStruct>(Name, InGridPoint);
+		return this->Chunks[ChunkPoint]->FindOrAddChannel<TStruct>(Name, InGridPoint);
 	}
 
 	FORCEINLINE FInstancedStruct& FindOrAddChannel(const FName Name, const FVector& InLocation, UScriptStruct* Type)
@@ -54,7 +108,7 @@ public:
 		const FIntPoint ChunkPoint = this->ConvertGlobalToChunkGrid(InGridPoint);
 		this->TryMakeChunk(ChunkPoint);
 
-		return this->Chunks[ChunkPoint].FindOrAddChannel(Name, InGridPoint, Type);
+		return this->Chunks[ChunkPoint]->FindOrAddChannel(Name, InGridPoint, Type);
 	}
 
 	template <typename TStruct>
@@ -84,7 +138,7 @@ public:
 
 			for (const FIntPoint& Point : GridPoints)
 			{
-				Channels.Add(&this->Chunks[ChunkPoint].FindOrAddChannel<TStruct>(Name, Point));
+				Channels.Add(&this->Chunks[ChunkPoint]->FindOrAddChannel<TStruct>(Name, Point));
 			}
 		}
 
@@ -116,7 +170,7 @@ public:
 
 			for (const FIntPoint& Point : GridPoints)
 			{
-				Channels.Add(&this->Chunks[ChunkPoint].FindOrAddChannel(Name, Point, Type));
+				Channels.Add(&this->Chunks[ChunkPoint]->FindOrAddChannel(Name, Point, Type));
 			}
 		}
 
@@ -140,7 +194,7 @@ public:
 			return false;
 		}
 
-		return this->Chunks[ChunkPoint].TryRemoveChannel<TStruct>(Name, InGridLocation);
+		return this->Chunks[ChunkPoint]->TryRemoveChannel<TStruct>(Name, InGridLocation);
 	}
 
 	FORCEINLINE bool TryRemoveChannel(const FName Name, const FVector& InLocation, UScriptStruct* Type)
@@ -158,7 +212,7 @@ public:
 			return false;
 		}
 
-		return this->Chunks[ChunkPoint].TryRemoveChannel(Name, InGridLocation, Type);
+		return this->Chunks[ChunkPoint]->TryRemoveChannel(Name, InGridLocation, Type);
 	}
 
 	template <typename TStruct>
@@ -191,7 +245,7 @@ public:
 
 			for (const FIntPoint& Point : GridPoints)
 			{
-				bRemoved |= this->Chunks[ChunkPoint].TryRemoveChannel<TStruct>(Name, Point);
+				bRemoved |= this->Chunks[ChunkPoint]->TryRemoveChannel<TStruct>(Name, Point);
 			}
 		}
 
@@ -226,7 +280,7 @@ public:
 
 			for (const FIntPoint& Point : GridPoints)
 			{
-				bRemoved |= this->Chunks[ChunkPoint].TryRemoveChannel(Name, Point, Type);
+				bRemoved |= this->Chunks[ChunkPoint]->TryRemoveChannel(Name, Point, Type);
 			}
 		}
 
@@ -244,7 +298,7 @@ public:
 	FORCEINLINE bool HasChannel(const FName Name, const FIntPoint& InGridLocation) const
 	{
 		const FIntPoint ChunkPoint = this->ConvertGlobalToChunkGrid(InGridLocation);
-		return this->Chunks[ChunkPoint].HasChannel<TStruct>(Name, InGridLocation);
+		return this->Chunks[ChunkPoint]->HasChannel<TStruct>(Name, InGridLocation);
 	}
 
 	FORCEINLINE bool HasChannel(const FName Name, const FVector& InLocation, UScriptStruct* Type) const
@@ -262,7 +316,7 @@ public:
 			return false;
 		}
 
-		return this->Chunks[ChunkPoint].HasChannel(Name, InGridLocation, Type);
+		return this->Chunks[ChunkPoint]->HasChannel(Name, InGridLocation, Type);
 	}
 
 	template <typename TStruct>
@@ -294,7 +348,7 @@ public:
 
 			for (const FIntPoint& Point : GridPoints)
 			{
-				if (!this->Chunks[ChunkPoint].HasChannel<TStruct>(Name, Point))
+				if (!this->Chunks[ChunkPoint]->HasChannel<TStruct>(Name, Point))
 				{
 					return false;
 				}
@@ -331,7 +385,7 @@ public:
 
 			for (const FIntPoint& Point : GridPoints)
 			{
-				if (!this->Chunks[ChunkPoint].HasChannel(Name, Point, Type))
+				if (!this->Chunks[ChunkPoint]->HasChannel(Name, Point, Type))
 				{
 					return false;
 				}
