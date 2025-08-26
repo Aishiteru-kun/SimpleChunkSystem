@@ -13,7 +13,7 @@ DEFINE_LOG_CATEGORY_STATIC(LogSChunkSystemLocal_DynamicData, Log, All)
  * creating and removing data channels identified by name.
  */
 template <bool bIsSerialize = true, FConvertWorldToGrid FuncConv = UChunkBlueprintFunctionLibrary::ConvertGlobalLocationToGrid>
-class SIMPLECHUNKSYSTEM_API FChunkSystem_DynamicData final : public FChunkSystemBase<FChunk_DynamicData, bIsSerialize, FuncConv>
+class FChunkSystem_DynamicData final : public FChunkSystemBase<FChunk_DynamicData, bIsSerialize, FuncConv>
 {
 	friend class FChunk_ChunkSystem_DynamicDataTest;
 

@@ -25,7 +25,7 @@ using FConvertWorldToGrid = FIntPoint(*)(const UObject*, const FVector&);
  */
 template <typename Type, bool bIsSerialize = true, FConvertWorldToGrid FuncConv =
 	          UChunkBlueprintFunctionLibrary::ConvertGlobalLocationToGrid>
-class SIMPLECHUNKSYSTEM_API FChunkSystemBase
+class FChunkSystemBase
 {
 	static_assert(TIsDerivedFrom<Type, FChunkBase>::Value, "Type must be derived from FChunkBase");
 
