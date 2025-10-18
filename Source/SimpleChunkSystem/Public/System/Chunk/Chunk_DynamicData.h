@@ -346,6 +346,11 @@ public:
 		return CellInfo->FindChannel(Name, Type);
 	}
 
+	FORCEINLINE const TMap<FCellChannelKey, TSet<FIntPoint>>& GetChannelIndex() const
+	{
+		return ChannelIndex;
+	}
+
 	virtual void DrawDebug(const UWorld* World, const TFunction<FVector(const FIntPoint&)>& Convertor) const override;
 
 private:
@@ -399,6 +404,16 @@ class FChunk_DynamicData::TChannelIteratorRangeImpl
 			return !(*this == Other);
 		}
 
+		bool IsValid() const 
+		{
+			return Index < Locations->Num();
+		}
+
+		explicit operator bool() const
+		{
+			return IsValid();
+		}
+
 		FReturnType operator*() const
 		{
 			check(Locations && Key && Owner);
@@ -437,7 +452,7 @@ public:
 			Locations.Reserve(InLocations->Num());
 			for (const FIntPoint& Location : *InLocations)
 			{
-				Locations.Add(Location);
+				Locations.Emplace(Location);
 			}
 		}
 	}

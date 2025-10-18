@@ -67,3 +67,23 @@ struct SIMPLECHUNKSYSTEM_API FData3_UnitTest : public FCellBaseInfo
 		return Ar;
 	}
 };
+
+USTRUCT()
+struct SIMPLECHUNKSYSTEM_API FDataArray_UnitTest : public FCellBaseInfo
+{
+	GENERATED_BODY()
+
+	TArray<int32> Values;
+
+	virtual bool Serialize(FArchive& Ar) override
+	{
+		Ar << Values;
+		return true;
+	}
+
+	friend FArchive& operator<<(FArchive& Ar, FDataArray_UnitTest& Data)
+	{
+		Data.Serialize(Ar);
+		return Ar;
+	}
+};

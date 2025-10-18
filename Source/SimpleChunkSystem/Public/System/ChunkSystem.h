@@ -30,6 +30,8 @@ class TChunkSystemBase
 	static_assert(TIsDerivedFrom<Type, FChunkBase>::Value, "Type must be derived from FChunkBase");
 
 	friend class FChunk_DivFloorTest;
+	friend class FChunk_ChunkSystem_SystemIteratorTest;
+	friend class FChunk_ChunkSystem_ChannelIndexRebuildTest;
 
 	using FChunkPtr = TSharedPtr<Type, ESPMode::ThreadSafe>;
 
@@ -112,24 +114,24 @@ public:
 		return TryMakeChunk(ChunkPoint);
 	}
 
-	FORCEINLINE bool TryRemoveChunkByLocation(const FVector& InGlobalLocation)
+	FORCEINLINE virtual bool TryRemoveChunkByLocation(const FVector& InGlobalLocation)
 	{
 		const FIntPoint ChunkPoint = ConvertGlobalToChunkGrid(InGlobalLocation);
 		return TryRemoveChunk(ChunkPoint);
 	}
 
-	FORCEINLINE bool TryRemoveChunkByGrid(const FIntPoint& InGlobalGridLocation)
+	FORCEINLINE virtual bool TryRemoveChunkByGrid(const FIntPoint& InGlobalGridLocation)
 	{
 		const FIntPoint ChunkPoint = ConvertGlobalToChunkGrid(InGlobalGridLocation);
 		return TryRemoveChunk(ChunkPoint);
 	}
 
-	FORCEINLINE void Reserve(const int32 InAmount)
+	FORCEINLINE virtual void Reserve(const int32 InAmount)
 	{
 		Chunks.Reserve(FMath::Max(InAmount, 0));
 	}
 
-	FORCEINLINE void Shrink()
+	FORCEINLINE virtual void Shrink()
 	{
 		Chunks.Shrink();
 	}
@@ -139,7 +141,7 @@ public:
 		return Chunks.Num();
 	}
 
-	FORCEINLINE void Empty(const int32 ExpectedNumElements = 0)
+	FORCEINLINE virtual void Empty(const int32 ExpectedNumElements = 0)
 	{
 		Chunks.Empty(ExpectedNumElements);
 	}
