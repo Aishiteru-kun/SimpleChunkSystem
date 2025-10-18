@@ -218,6 +218,44 @@ FORCEINLINE bool FChunk_ChunkSystem_DynamicDataTest::RunTest(const FString& Para
 		TestEqual(TEXT("Data_3 Name2 after re-adding"), Data_3_Ptr->Name2, TestChannel3_Name2);
 	}
 
+	{
+		const FIntPoint TargetChunk = ChunkSystem->ConvertGlobalToChunkGrid(TestCase4_Location);
+		TSharedPtr<FChunk_DynamicData, ESPMode::ThreadSafe>* const ChunkPtr = ChunkSystem->Chunks.Find(TargetChunk);
+		TestNotNull(TEXT("Chunk exists for iterator test"), ChunkPtr ? ChunkPtr->Get() : nullptr);
+
+		if (ChunkPtr && ChunkPtr->IsValid())
+		{
+			FChunk_DynamicData& Chunk = *ChunkPtr->Get();
+
+			{
+				auto Range = Chunk.IterateChannel<FData_UnitTest>(TestCase4_ChannelName);
+				int32 EntryCount = 0;
+				for (const auto Entry : Range)
+				{
+					++EntryCount;
+					TestEqual(TEXT("Iterator reports correct cell"), Entry.Key, TestCase4_Location);
+					TestEqual(TEXT("Iterator exposes stored value"), Entry.Value.Value, TestChannel_Value);
+				}
+				TestEqual(TEXT("Iterator entry count"), EntryCount, 1);
+			}
+
+			{
+				const auto ConstRange = static_cast<const FChunk_DynamicData&>(Chunk)
+					.IterateChannel<FData2_UnitTest>(TestCase4_ChannelName2);
+				int32 EntryCount = 0;
+				for (const auto Entry : ConstRange)
+				{
+					++EntryCount;
+					TestEqual(TEXT("Const iterator reports correct cell"), Entry.Key, TestCase4_Location);
+					TestEqual(TEXT("Const iterator exposes first value"), Entry.Value.Value, TestChannel2_Value);
+					TestEqual(TEXT("Const iterator exposes second value"), Entry.Value.Value2,
+					          TestChannel2_Value2);
+				}
+				TestEqual(TEXT("Const iterator entry count"), EntryCount, 1);
+			}
+		}
+	}
+
 	TestTrue(TEXT("Delete Channel FData_UnitTest after re-adding"),
 	         ChunkSystem->TryRemoveChannel<FData_UnitTest>(TestCase4_ChannelName, TestCase4_Location));
 	TestFalse(TEXT("Has Channel FData_UnitTest after re-deletion"),
@@ -232,6 +270,16 @@ FORCEINLINE bool FChunk_ChunkSystem_DynamicDataTest::RunTest(const FString& Para
 	         ChunkSystem->TryRemoveChannel<FData3_UnitTest>(TestCase4_ChannelName3, TestCase4_Location));
 	TestFalse(TEXT("Has Channel FData3_UnitTest after re-deletion"),
 	          ChunkSystem->HasChannel<FData3_UnitTest>(TestCase4_ChannelName3, TestCase4_Location));
+
+	{
+		const FIntPoint TargetChunk = ChunkSystem->ConvertGlobalToChunkGrid(TestCase4_Location);
+		TSharedPtr<FChunk_DynamicData, ESPMode::ThreadSafe>* const ChunkPtr = ChunkSystem->Chunks.Find(TargetChunk);
+		if (ChunkPtr && ChunkPtr->IsValid())
+		{
+			auto Range = ChunkPtr->Get()->IterateChannel<FData_UnitTest>(TestCase4_ChannelName);
+			TestTrue(TEXT("Iterator empty after removal"), Range.IsEmpty());
+		}
+	}
 
 	delete ChunkSystem;
 

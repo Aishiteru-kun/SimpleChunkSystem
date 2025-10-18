@@ -177,6 +177,8 @@ FChunk_DynamicData::FChunk_DynamicData(const FIntPoint& InTopLeft, const FIntPoi
 			Cells.Emplace(FIntPoint{X, Y});
 		}
 	}
+
+	Cells.Shrink();
 }
 
 void FChunk_DynamicData::Serialize(FArchive& Ar)
@@ -195,6 +197,8 @@ void FChunk_DynamicData::Serialize(FArchive& Ar)
 
 	if (Count == 0)
 	{
+		Cells.Empty();
+		ChannelIndex.Empty();
 		return;
 	}
 
@@ -225,6 +229,8 @@ void FChunk_DynamicData::Serialize(FArchive& Ar)
 			Value.Serialize(Ar);
 		}
 	}
+
+	RebuildChannelIndex();
 }
 
 void FChunk_DynamicData::DrawDebug(const UWorld* World, const TFunction<FVector(const FIntPoint&)>& Convertor) const
@@ -234,5 +240,60 @@ void FChunk_DynamicData::DrawDebug(const UWorld* World, const TFunction<FVector(
 	for (const TPair<FIntPoint, FCellDynamicInfo>& Cell : Cells)
 	{
 		Cell.Value.DrawDebug(World, Convertor(Cell.Key));
+	}
+}
+
+void FChunk_DynamicData::RegisterChannelLocation(const FCellChannelKey& Key, const FIntPoint& CellPoint)
+{
+	if (!Key.Type)
+	{
+		return;
+	}
+
+	TSet<FIntPoint>& Locations = ChannelIndex.FindOrAdd(Key);
+	Locations.Add(CellPoint);
+}
+
+void FChunk_DynamicData::UnregisterChannelLocation(const FCellChannelKey& Key, const FIntPoint& CellPoint)
+{
+	if (TSet<FIntPoint>* const Locations = ChannelIndex.Find(Key))
+	{
+		Locations->Remove(CellPoint);
+
+		if (Locations->Num() == 0)
+		{
+			ChannelIndex.Remove(Key);
+		}
+	}
+}
+
+const TSet<FIntPoint>* FChunk_DynamicData::FindChannelLocations(const FCellChannelKey& Key) const
+{
+	return ChannelIndex.Find(Key);
+}
+
+TSet<FIntPoint>* FChunk_DynamicData::FindChannelLocations(const FCellChannelKey& Key)
+{
+	return ChannelIndex.Find(Key);
+}
+
+void FChunk_DynamicData::RebuildChannelIndex()
+{
+	ChannelIndex.Empty();
+
+	for (const TPair<FIntPoint, FCellDynamicInfo>& Cell : Cells)
+	{
+		const FIntPoint& CellPoint = Cell.Key;
+		const FCellDynamicInfo& CellInfo = Cell.Value;
+
+		for (const TPair<FCellChannelKey, TOptional<FInstancedStruct>>& Channel : CellInfo.GetChannels())
+		{
+			if (!Channel.Value.IsSet())
+			{
+				continue;
+			}
+
+			RegisterChannelLocation(Channel.Key, CellPoint);
+		}
 	}
 }
