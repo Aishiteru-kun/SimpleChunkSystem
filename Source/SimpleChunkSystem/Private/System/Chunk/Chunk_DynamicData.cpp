@@ -1,5 +1,7 @@
 ﻿#include "System/Chunk/Chunk_DynamicData.h"
 
+#include "Manager/ChunkManagerBase.h"
+
 void FCellChannelKey::Serialize(FArchive& Ar)
 {
 	Ar << ChannelName;
@@ -38,10 +40,25 @@ void FCellChannelKey::Serialize(FArchive& Ar)
 	}
 }
 
+bool FCellBaseInfo::Serialize(FArchive& Ar)
+{
+	return true;
+}
+
+void FCellBaseInfo::DrawDebug(const UWorld* World, const FVector& CellCenter) const
+{
+}
+
 void FCellDynamicInfo::Serialize(FArchive& Ar)
 {
 	int32 Count = Channels.Num();
 	Ar << Count;
+
+	if (Count < 0)
+	{
+		SCHUNK_LOG(LogSChunkLocal, Warning, TEXT("Can't serialize CellDynamicInfo, %d < 0"), Count);
+		return;
+	}
 
 	if (Count == 0)
 	{
@@ -136,11 +153,22 @@ void FCellDynamicInfo::Serialize(FArchive& Ar)
 	}
 }
 
+void FCellDynamicInfo::DrawDebug(const UWorld* World, const FVector& CellCenter) const
+{
+	for (const TPair<FCellChannelKey, TOptional<FInstancedStruct>>& Channel : Channels)
+	{
+		Channel.Value->GetPtr<FCellBaseInfo>()->DrawDebug(World, CellCenter);
+	}
+}
+
 FChunk_DynamicData::FChunk_DynamicData(const FIntPoint& InTopLeft, const FIntPoint& InBottomRight)
 	: FChunkBase(InTopLeft, InBottomRight)
 {
 	const FIntPoint& TL = GetTopLeft();
 	const FIntPoint& BR = GetBottomRight();
+
+	const int32 ChunkSize = FChunkInitParameters().ChunkSize;
+	Cells.Reserve(ChunkSize * ChunkSize);
 
 	for (int32 X = TL.X; X <= BR.X; ++X)
 	{
@@ -157,6 +185,18 @@ void FChunk_DynamicData::Serialize(FArchive& Ar)
 
 	int32 Count = Cells.Num();
 	Ar << Count;
+
+	if (Count < 0)
+	{
+		SCHUNK_LOG(LogSChunkLocal, Warning, TEXT("Can't serialize FChunk_DynamicData, %d < 0 in chunk at %s"), Count,
+		           *GetTopLeft().ToString());
+		return;
+	}
+
+	if (Count == 0)
+	{
+		return;
+	}
 
 	if (Ar.IsLoading())
 	{
@@ -184,5 +224,15 @@ void FChunk_DynamicData::Serialize(FArchive& Ar)
 			Ar << Key;
 			Value.Serialize(Ar);
 		}
+	}
+}
+
+void FChunk_DynamicData::DrawDebug(const UWorld* World, const TFunction<FVector(const FIntPoint&)>& Convertor) const
+{
+	Super::DrawDebug(World, Convertor);
+
+	for (const TPair<FIntPoint, FCellDynamicInfo>& Cell : Cells)
+	{
+		Cell.Value.DrawDebug(World, Convertor(Cell.Key));
 	}
 }

@@ -24,7 +24,7 @@ struct FChunkData_ObjectInfo : public FCellBaseInfo
 
 	virtual bool Serialize(FArchive& Ar) override;
 
-	friend FArchive& operator<<(FArchive& Ar, FChunkData_ObjectInfo & Data);
+	friend FArchive& operator<<(FArchive& Ar, FChunkData_ObjectInfo& InData);
 };
 
 DEFINE_LOG_CATEGORY_STATIC(LogSChunkManager_DynamicData, Log, All)
@@ -41,54 +41,96 @@ class SIMPLECHUNKSYSTEM_API UChunkManager_DynamicData : public UChunkManagerBase
 	GENERATED_BODY()
 
 public:
-	UFUNCTION(BlueprintCallable, Category = "Chunk Manager")
-	void SetChannelDataByLocation(const FName InChannelName, const FVector InLocation, const FInstancedStruct& InCellData);
+	// UObject interface
+	virtual void Serialize(FArchive& Ar) override;
+	// ~UObject interface
+
+public:
+	void InitializeWithSharedContext(const UChunkManager_DynamicData* InSharedContextFromObject);
 
 	UFUNCTION(BlueprintCallable, Category = "Chunk Manager")
-	void SetChannelDataByGridPoint(const FName InChannelName, const FIntPoint InGridPoint, const FInstancedStruct& InCellData);
+	void SetChannelDataByLocation(const FName InChannelName, const FVector InLocation,
+	                              const FInstancedStruct& InCellData);
 
 	UFUNCTION(BlueprintCallable, Category = "Chunk Manager")
-	FInstancedStruct GetChannelDataByLocation(const FName InChannelName, const FVector InLocation, UScriptStruct* InExpectedStruct, bool& bFound) const;
+	void SetChannelDataByGridPoint(const FName InChannelName, const FIntPoint InGridPoint,
+	                               const FInstancedStruct& InCellData);
 
 	UFUNCTION(BlueprintCallable, Category = "Chunk Manager")
-	FInstancedStruct GetChannelDataByGridPoint(const FName InChannelName, const FIntPoint InGridPoint, UScriptStruct* InExpectedStruct, bool& bFound) const;
+	FInstancedStruct GetChannelDataByLocation(const FName InChannelName, const FVector InLocation,
+	                                          UScriptStruct* InExpectedStruct, bool& bFound) const;
 
 	UFUNCTION(BlueprintCallable, Category = "Chunk Manager")
-	TArray<FInstancedStruct> GetChannelDataByLocations(const FName InChannelName, const TSet<FVector>& InLocations, UScriptStruct* InExpectedStruct) const;
+	FInstancedStruct GetChannelDataByGridPoint(const FName InChannelName, const FIntPoint InGridPoint,
+	                                           UScriptStruct* InExpectedStruct, bool& bFound) const;
 
 	UFUNCTION(BlueprintCallable, Category = "Chunk Manager")
-	TArray<FInstancedStruct> GetChannelDataByGridPoints(const FName InChannelName, const TSet<FIntPoint>& InGridPoint, UScriptStruct* InExpectedStruct) const;
+	TArray<FInstancedStruct> GetChannelDataByLocations(const FName InChannelName, const TSet<FVector>& InLocations,
+	                                                   UScriptStruct* InExpectedStruct) const;
 
 	UFUNCTION(BlueprintCallable, Category = "Chunk Manager")
-	bool TryRemoveChannelByLocation(const FName InChannelName, const FVector InLocation, UScriptStruct* InExpectedStruct);
+	TArray<FInstancedStruct> GetChannelDataByGridPoints(const FName InChannelName, const TSet<FIntPoint>& InGridPoint,
+	                                                    UScriptStruct* InExpectedStruct) const;
 
 	UFUNCTION(BlueprintCallable, Category = "Chunk Manager")
-	bool TryRemoveChannelByGridPoint(const FName InChannelName, const FIntPoint InGridPoint, UScriptStruct* InExpectedStruct);
+	bool TryRemoveChannelByLocation(const FName InChannelName, const FVector InLocation,
+	                                UScriptStruct* InExpectedStruct);
 
 	UFUNCTION(BlueprintCallable, Category = "Chunk Manager")
-	bool TryRemoveChannelByLocations(const FName InChannelName, const TSet<FVector>& InLocations, UScriptStruct* InExpectedStruct);
+	bool TryRemoveChannelByGridPoint(const FName InChannelName, const FIntPoint InGridPoint,
+	                                 UScriptStruct* InExpectedStruct);
 
 	UFUNCTION(BlueprintCallable, Category = "Chunk Manager")
-	bool TryRemoveChannelByGridPoints(const FName InChannelName, const TSet<FIntPoint>& InGridPoint, UScriptStruct* InExpectedStruct);
+	bool TryRemoveChannelByLocations(const FName InChannelName, const TSet<FVector>& InLocations,
+	                                 UScriptStruct* InExpectedStruct);
 
 	UFUNCTION(BlueprintCallable, Category = "Chunk Manager")
-	bool HasChannelByLocation(const FName InChannelName, const FVector InLocation, UScriptStruct* InExpectedStruct) const;
+	bool TryRemoveChannelByGridPoints(const FName InChannelName, const TSet<FIntPoint>& InGridPoint,
+	                                  UScriptStruct* InExpectedStruct);
 
 	UFUNCTION(BlueprintCallable, Category = "Chunk Manager")
-	bool HasChannelByGridPoint(const FName InChannelName, const FIntPoint InGridPoint, UScriptStruct* InExpectedStruct) const;
+	bool HasChannelByLocation(const FName InChannelName, const FVector InLocation,
+	                          UScriptStruct* InExpectedStruct) const;
 
 	UFUNCTION(BlueprintCallable, Category = "Chunk Manager")
-	bool HasChannelByLocations(const FName InChannelName, const TSet<FVector>& InLocations, UScriptStruct* InExpectedStruct) const;
+	bool HasChannelByGridPoint(const FName InChannelName, const FIntPoint InGridPoint,
+	                           UScriptStruct* InExpectedStruct) const;
 
 	UFUNCTION(BlueprintCallable, Category = "Chunk Manager")
-	bool HasChannelByGridPoints(const FName InChannelName, const TSet<FIntPoint>& InGridPoint, UScriptStruct* InExpectedStruct) const;
+	bool HasChannelByLocations(const FName InChannelName, const TSet<FVector>& InLocations,
+	                           UScriptStruct* InExpectedStruct) const;
 
-	FORCEINLINE TUniquePtr<FChunkSystem_DynamicData<>>& GetChunkSystemDynamicData() { return ChunkSystem_DynamicData; }
+	UFUNCTION(BlueprintCallable, Category = "Chunk Manager")
+	bool HasChannelByGridPoints(const FName InChannelName, const TSet<FIntPoint>& InGridPoint,
+	                            UScriptStruct* InExpectedStruct) const;
+
+	UFUNCTION(BlueprintCallable, Category = "Chunk Manager")
+	bool IsEmpty() const;
+
+	UFUNCTION(BlueprintCallable, Category = "Chunk Manager")
+	void Empty(const int32 InExpectedNumElements = 0);
+
+	UFUNCTION(BlueprintCallable, Category = "Chunk Manager")
+	void Reserve(const int32 InAmount);
+
+	UFUNCTION(BlueprintCallable, Category = "Chunk Manager")
+	void Shrink();
+
+	UFUNCTION(BlueprintCallable, Category = "Chunk Manager")
+	int32 Num() const;
+
+	// Debug
+	void DrawDebug(const TFunction<FVector(const FIntPoint&)>& InConvertor) const;
 
 protected:
+	FORCEINLINE TSharedPtr<TChunkSystem_DynamicData<>>& GetChunkSystemDynamicData()
+	{
+		return ChunkSystem_DynamicData;
+	}
+
 	virtual void CreateChunkSystem() override;
 	virtual void OnInitialized() override;
 
 private:
-	TUniquePtr<FChunkSystem_DynamicData<>> ChunkSystem_DynamicData;
+	TSharedPtr<TChunkSystem_DynamicData<>> ChunkSystem_DynamicData;
 };

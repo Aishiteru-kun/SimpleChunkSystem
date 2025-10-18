@@ -36,16 +36,17 @@ FORCEINLINE bool FChunk_DivFloorTest::RunTest(const FString& Parameters)
 	}
 
 	constexpr int32 ChunkSize = 7;
-	const FChunkSystemBase<FChunk_DynamicData>* ChunkSystem = new FChunkSystemBase<FChunk_DynamicData>(World, ChunkSize);
+	const TChunkSystemBase<FChunk_DynamicData>* ChunkSystem = new TChunkSystemBase<
+		FChunk_DynamicData>(World, ChunkSize);
 
-	TestEqual(TEXT("0/7"),     ChunkSystem->DivFloor(0,ChunkSize),   0);
-	TestEqual(TEXT("1/7"),     ChunkSystem->DivFloor(1,ChunkSize),   0);
-	TestEqual(TEXT("6/7"),     ChunkSystem->DivFloor(6,ChunkSize),   0);
-	TestEqual(TEXT("7/7"),     ChunkSystem->DivFloor(7,ChunkSize),   1);
+	TestEqual(TEXT("0/7"), ChunkSystem->DivFloor(0, ChunkSize), 0);
+	TestEqual(TEXT("1/7"), ChunkSystem->DivFloor(1, ChunkSize), 0);
+	TestEqual(TEXT("6/7"), ChunkSystem->DivFloor(6, ChunkSize), 0);
+	TestEqual(TEXT("7/7"), ChunkSystem->DivFloor(7, ChunkSize), 1);
 
-	TestEqual(TEXT("-1/7"),    ChunkSystem->DivFloor(-1,ChunkSize), -1);
-	TestEqual(TEXT("-7/7"),    ChunkSystem->DivFloor(-7,ChunkSize), -1);
-	TestEqual(TEXT("-8/7"),    ChunkSystem->DivFloor(-8,ChunkSize), -2);
+	TestEqual(TEXT("-1/7"), ChunkSystem->DivFloor(-1, ChunkSize), -1);
+	TestEqual(TEXT("-7/7"), ChunkSystem->DivFloor(-7, ChunkSize), -1);
+	TestEqual(TEXT("-8/7"), ChunkSystem->DivFloor(-8, ChunkSize), -2);
 
 	delete ChunkSystem;
 
@@ -53,8 +54,8 @@ FORCEINLINE bool FChunk_DivFloorTest::RunTest(const FString& Parameters)
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FChunk_ChunkSystem_DynamicDataTest,
-								 "SimpleChunkSystem.System.DynamicDataTest",
-								 EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+                                 "SimpleChunkSystem.System.DynamicDataTest",
+                                 EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
 FORCEINLINE bool FChunk_ChunkSystem_DynamicDataTest::RunTest(const FString& Parameters)
 {
@@ -79,7 +80,7 @@ FORCEINLINE bool FChunk_ChunkSystem_DynamicDataTest::RunTest(const FString& Para
 	}
 
 	constexpr int32 ChunkSize = 7;
-	FChunkSystem_DynamicData<>* ChunkSystem = new FChunkSystem_DynamicData(World, ChunkSize);
+	TChunkSystem_DynamicData<>* ChunkSystem = new TChunkSystem_DynamicData(World, ChunkSize);
 	TestTrue(TEXT("ChunkSystem is valid"), ChunkSystem != nullptr);
 
 	const FVector TestChannel_Location = FVector(1000, 2000, 3000);
@@ -87,7 +88,8 @@ FORCEINLINE bool FChunk_ChunkSystem_DynamicDataTest::RunTest(const FString& Para
 	const int32 TestChannel_Value = 42;
 
 	{
-		ChunkSystem->FindOrAddChannel<FData_UnitTest>(TestChannel_ChannelName, TestChannel_Location).GetMutablePtr<FData_UnitTest>()->Value = TestChannel_Value;
+		ChunkSystem->FindOrAddChannel<FData_UnitTest>(TestChannel_ChannelName, TestChannel_Location).GetMutablePtr<
+			FData_UnitTest>()->Value = TestChannel_Value;
 	}
 
 	const FVector TestChannel2_Location = FVector(2000, 3000, 4000);
@@ -96,7 +98,8 @@ FORCEINLINE bool FChunk_ChunkSystem_DynamicDataTest::RunTest(const FString& Para
 	const int32 TestChannel2_Value2 = 168;
 
 	{
-		FInstancedStruct& Data_2 = ChunkSystem->FindOrAddChannel<FData2_UnitTest>(TestChannel2_ChannelName, TestChannel2_Location);
+		FInstancedStruct& Data_2 = ChunkSystem->FindOrAddChannel<FData2_UnitTest>(TestChannel2_ChannelName,
+			TestChannel2_Location);
 		FData2_UnitTest* Data_2_Ptr = Data_2.GetMutablePtr<FData2_UnitTest>();
 		Data_2_Ptr->Value = TestChannel2_Value;
 		Data_2_Ptr->Value2 = TestChannel2_Value2;
@@ -108,44 +111,57 @@ FORCEINLINE bool FChunk_ChunkSystem_DynamicDataTest::RunTest(const FString& Para
 	const FName TestChannel3_Name2 = TEXT("TestName2");
 
 	{
-		FInstancedStruct& Data_3 = ChunkSystem->FindOrAddChannel<FData3_UnitTest>(TestChannel3_ChannelName, TestChannel3_Location);
+		FInstancedStruct& Data_3 = ChunkSystem->FindOrAddChannel<FData3_UnitTest>(TestChannel3_ChannelName,
+			TestChannel3_Location);
 		FData3_UnitTest* Data_3_Ptr = Data_3.GetMutablePtr<FData3_UnitTest>();
 		Data_3_Ptr->Name = TestChannel3_Name;
 		Data_3_Ptr->Name2 = TestChannel3_Name2;
 	}
 
-	TestTrue(TEXT("Has Channel FData_UnitTest"), ChunkSystem->HasChannel<FData_UnitTest>(TestChannel_ChannelName, TestChannel_Location));
-	TestTrue(TEXT("Has Channel FData2_UnitTest"), ChunkSystem->HasChannel<FData2_UnitTest>(TestChannel2_ChannelName, TestChannel2_Location));
-	TestTrue(TEXT("Has Channel FData3_UnitTest"), ChunkSystem->HasChannel<FData3_UnitTest>(TestChannel3_ChannelName, TestChannel3_Location));
+	TestTrue(TEXT("Has Channel FData_UnitTest"),
+	         ChunkSystem->HasChannel<FData_UnitTest>(TestChannel_ChannelName, TestChannel_Location));
+	TestTrue(TEXT("Has Channel FData2_UnitTest"),
+	         ChunkSystem->HasChannel<FData2_UnitTest>(TestChannel2_ChannelName, TestChannel2_Location));
+	TestTrue(TEXT("Has Channel FData3_UnitTest"),
+	         ChunkSystem->HasChannel<FData3_UnitTest>(TestChannel3_ChannelName, TestChannel3_Location));
 
 	{
-		FInstancedStruct& Data = ChunkSystem->FindOrAddChannel<FData_UnitTest>(TestChannel_ChannelName, TestChannel_Location);
+		FInstancedStruct& Data = ChunkSystem->FindOrAddChannel<FData_UnitTest>(TestChannel_ChannelName,
+		                                                                       TestChannel_Location);
 		const FData_UnitTest* Data_Ptr = Data.GetPtr<FData_UnitTest>();
 		TestEqual(TEXT("Data Value"), Data_Ptr->Value, TestChannel_Value);
 	}
 
 	{
-		FInstancedStruct& Data_2 = ChunkSystem->FindOrAddChannel<FData2_UnitTest>(TestChannel2_ChannelName, TestChannel2_Location);
+		FInstancedStruct& Data_2 = ChunkSystem->FindOrAddChannel<FData2_UnitTest>(TestChannel2_ChannelName,
+			TestChannel2_Location);
 		const FData2_UnitTest* Data_2_Ptr = Data_2.GetPtr<FData2_UnitTest>();
 		TestEqual(TEXT("Data_2 Value"), Data_2_Ptr->Value, TestChannel2_Value);
 		TestEqual(TEXT("Data_2 Value2"), Data_2_Ptr->Value2, TestChannel2_Value2);
 	}
 
 	{
-		FInstancedStruct& Data_3 = ChunkSystem->FindOrAddChannel<FData3_UnitTest>(TestChannel3_ChannelName, TestChannel3_Location);
+		FInstancedStruct& Data_3 = ChunkSystem->FindOrAddChannel<FData3_UnitTest>(TestChannel3_ChannelName,
+			TestChannel3_Location);
 		const FData3_UnitTest* Data_3_Ptr = Data_3.GetPtr<FData3_UnitTest>();
 		TestEqual(TEXT("Data_3 Name"), Data_3_Ptr->Name, TestChannel3_Name);
 		TestEqual(TEXT("Data_3 Name2"), Data_3_Ptr->Name2, TestChannel3_Name2);
 	}
 
-	TestTrue(TEXT("Delete Channel FData_UnitTest"), ChunkSystem->TryRemoveChannel<FData_UnitTest>(TestChannel_ChannelName, TestChannel_Location));
-	TestFalse(TEXT("Has Channel FData_UnitTest after deletion"), ChunkSystem->HasChannel<FData_UnitTest>(TestChannel_ChannelName, TestChannel_Location));
+	TestTrue(TEXT("Delete Channel FData_UnitTest"),
+	         ChunkSystem->TryRemoveChannel<FData_UnitTest>(TestChannel_ChannelName, TestChannel_Location));
+	TestFalse(TEXT("Has Channel FData_UnitTest after deletion"),
+	          ChunkSystem->HasChannel<FData_UnitTest>(TestChannel_ChannelName, TestChannel_Location));
 
-	TestTrue(TEXT("Delete Channel FData2_UnitTest"), ChunkSystem->TryRemoveChannel<FData2_UnitTest>(TestChannel2_ChannelName, TestChannel2_Location));
-	TestFalse(TEXT("Has Channel FData2_UnitTest after deletion"), ChunkSystem->HasChannel<FData2_UnitTest>(TestChannel2_ChannelName, TestChannel2_Location));
+	TestTrue(TEXT("Delete Channel FData2_UnitTest"),
+	         ChunkSystem->TryRemoveChannel<FData2_UnitTest>(TestChannel2_ChannelName, TestChannel2_Location));
+	TestFalse(TEXT("Has Channel FData2_UnitTest after deletion"),
+	          ChunkSystem->HasChannel<FData2_UnitTest>(TestChannel2_ChannelName, TestChannel2_Location));
 
-	TestTrue(TEXT("Delete Channel FData3_UnitTest"), ChunkSystem->TryRemoveChannel<FData3_UnitTest>(TestChannel3_ChannelName, TestChannel3_Location));
-	TestFalse(TEXT("Has Channel FData3_UnitTest after deletion"), ChunkSystem->HasChannel<FData3_UnitTest>(TestChannel3_ChannelName, TestChannel3_Location));
+	TestTrue(TEXT("Delete Channel FData3_UnitTest"),
+	         ChunkSystem->TryRemoveChannel<FData3_UnitTest>(TestChannel3_ChannelName, TestChannel3_Location));
+	TestFalse(TEXT("Has Channel FData3_UnitTest after deletion"),
+	          ChunkSystem->HasChannel<FData3_UnitTest>(TestChannel3_ChannelName, TestChannel3_Location));
 
 	const FIntPoint TestCase4_Location = FIntPoint(20, 20);
 	const FName TestCase4_ChannelName = TEXT("TestCase4_1");
@@ -153,54 +169,69 @@ FORCEINLINE bool FChunk_ChunkSystem_DynamicDataTest::RunTest(const FString& Para
 	const FName TestCase4_ChannelName3 = TEXT("TestCase4_3");
 
 	{
-		FInstancedStruct& Data_4 = ChunkSystem->FindOrAddChannel<FData_UnitTest>(TestCase4_ChannelName, TestCase4_Location);
+		FInstancedStruct& Data_4 = ChunkSystem->FindOrAddChannel<FData_UnitTest>(TestCase4_ChannelName,
+			TestCase4_Location);
 		Data_4.GetMutablePtr<FData_UnitTest>()->Value = TestChannel_Value;
 	}
 
 	{
-		FInstancedStruct& Data_4_2 = ChunkSystem->FindOrAddChannel<FData2_UnitTest>(TestCase4_ChannelName2, TestCase4_Location);
+		FInstancedStruct& Data_4_2 = ChunkSystem->FindOrAddChannel<FData2_UnitTest>(TestCase4_ChannelName2,
+			TestCase4_Location);
 		Data_4_2.GetMutablePtr<FData2_UnitTest>()->Value = TestChannel2_Value;
 		Data_4_2.GetMutablePtr<FData2_UnitTest>()->Value2 = TestChannel2_Value2;
 	}
 
 	{
-		FInstancedStruct& Data_4_3 = ChunkSystem->FindOrAddChannel<FData3_UnitTest>(TestCase4_ChannelName3, TestCase4_Location);
+		FInstancedStruct& Data_4_3 = ChunkSystem->FindOrAddChannel<FData3_UnitTest>(TestCase4_ChannelName3,
+			TestCase4_Location);
 		Data_4_3.GetMutablePtr<FData3_UnitTest>()->Name = TestChannel3_Name;
 		Data_4_3.GetMutablePtr<FData3_UnitTest>()->Name2 = TestChannel3_Name2;
 	}
 
-	TestTrue(TEXT("Has Channel FData_UnitTest after re-adding"), ChunkSystem->HasChannel<FData_UnitTest>(TestCase4_ChannelName, TestCase4_Location));
-	TestTrue(TEXT("Has Channel FData2_UnitTest after re-adding"), ChunkSystem->HasChannel<FData2_UnitTest>(TestCase4_ChannelName2, TestCase4_Location));
-	TestTrue(TEXT("Has Channel FData3_UnitTest after re-adding"), ChunkSystem->HasChannel<FData3_UnitTest>(TestCase4_ChannelName3, TestCase4_Location));
+	TestTrue(TEXT("Has Channel FData_UnitTest after re-adding"),
+	         ChunkSystem->HasChannel<FData_UnitTest>(TestCase4_ChannelName, TestCase4_Location));
+	TestTrue(TEXT("Has Channel FData2_UnitTest after re-adding"),
+	         ChunkSystem->HasChannel<FData2_UnitTest>(TestCase4_ChannelName2, TestCase4_Location));
+	TestTrue(TEXT("Has Channel FData3_UnitTest after re-adding"),
+	         ChunkSystem->HasChannel<FData3_UnitTest>(TestCase4_ChannelName3, TestCase4_Location));
 
 	{
-		FInstancedStruct& Data = ChunkSystem->FindOrAddChannel<FData_UnitTest>(TestCase4_ChannelName, TestCase4_Location);
+		FInstancedStruct& Data = ChunkSystem->FindOrAddChannel<FData_UnitTest>(TestCase4_ChannelName,
+		                                                                       TestCase4_Location);
 		const FData_UnitTest* Data_Ptr = Data.GetPtr<FData_UnitTest>();
 		TestEqual(TEXT("Data Value after re-adding"), Data_Ptr->Value, TestChannel_Value);
 	}
 
 	{
-		FInstancedStruct& Data_2 = ChunkSystem->FindOrAddChannel<FData2_UnitTest>(TestCase4_ChannelName2, TestCase4_Location);
+		FInstancedStruct& Data_2 = ChunkSystem->FindOrAddChannel<FData2_UnitTest>(TestCase4_ChannelName2,
+			TestCase4_Location);
 		const FData2_UnitTest* Data_2_Ptr = Data_2.GetPtr<FData2_UnitTest>();
 		TestEqual(TEXT("Data_2 Value after re-adding"), Data_2_Ptr->Value, TestChannel2_Value);
 		TestEqual(TEXT("Data_2 Value2 after re-adding"), Data_2_Ptr->Value2, TestChannel2_Value2);
 	}
 
 	{
-		FInstancedStruct& Data_3 = ChunkSystem->FindOrAddChannel<FData3_UnitTest>(TestCase4_ChannelName3, TestCase4_Location);
+		FInstancedStruct& Data_3 = ChunkSystem->FindOrAddChannel<FData3_UnitTest>(TestCase4_ChannelName3,
+			TestCase4_Location);
 		const FData3_UnitTest* Data_3_Ptr = Data_3.GetPtr<FData3_UnitTest>();
 		TestEqual(TEXT("Data_3 Name after re-adding"), Data_3_Ptr->Name, TestChannel3_Name);
 		TestEqual(TEXT("Data_3 Name2 after re-adding"), Data_3_Ptr->Name2, TestChannel3_Name2);
 	}
 
-	TestTrue(TEXT("Delete Channel FData_UnitTest after re-adding"), ChunkSystem->TryRemoveChannel<FData_UnitTest>(TestCase4_ChannelName, TestCase4_Location));
-	TestFalse(TEXT("Has Channel FData_UnitTest after re-deletion"), ChunkSystem->HasChannel<FData_UnitTest>(TestCase4_ChannelName, TestCase4_Location));
+	TestTrue(TEXT("Delete Channel FData_UnitTest after re-adding"),
+	         ChunkSystem->TryRemoveChannel<FData_UnitTest>(TestCase4_ChannelName, TestCase4_Location));
+	TestFalse(TEXT("Has Channel FData_UnitTest after re-deletion"),
+	          ChunkSystem->HasChannel<FData_UnitTest>(TestCase4_ChannelName, TestCase4_Location));
 
-	TestTrue(TEXT("Delete Channel FData2_UnitTest after re-adding"), ChunkSystem->TryRemoveChannel<FData2_UnitTest>(TestCase4_ChannelName2, TestCase4_Location));
-	TestFalse(TEXT("Has Channel FData2_UnitTest after re-deletion"), ChunkSystem->HasChannel<FData2_UnitTest>(TestCase4_ChannelName2, TestCase4_Location));
+	TestTrue(TEXT("Delete Channel FData2_UnitTest after re-adding"),
+	         ChunkSystem->TryRemoveChannel<FData2_UnitTest>(TestCase4_ChannelName2, TestCase4_Location));
+	TestFalse(TEXT("Has Channel FData2_UnitTest after re-deletion"),
+	          ChunkSystem->HasChannel<FData2_UnitTest>(TestCase4_ChannelName2, TestCase4_Location));
 
-	TestTrue(TEXT("Delete Channel FData3_UnitTest after re-adding"), ChunkSystem->TryRemoveChannel<FData3_UnitTest>(TestCase4_ChannelName3, TestCase4_Location));
-	TestFalse(TEXT("Has Channel FData3_UnitTest after re-deletion"), ChunkSystem->HasChannel<FData3_UnitTest>(TestCase4_ChannelName3, TestCase4_Location));
+	TestTrue(TEXT("Delete Channel FData3_UnitTest after re-adding"),
+	         ChunkSystem->TryRemoveChannel<FData3_UnitTest>(TestCase4_ChannelName3, TestCase4_Location));
+	TestFalse(TEXT("Has Channel FData3_UnitTest after re-deletion"),
+	          ChunkSystem->HasChannel<FData3_UnitTest>(TestCase4_ChannelName3, TestCase4_Location));
 
 	delete ChunkSystem;
 
@@ -208,8 +239,8 @@ FORCEINLINE bool FChunk_ChunkSystem_DynamicDataTest::RunTest(const FString& Para
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FChunk_ChunkSystem_DynamicDataTest_SameDataInOtherChannel,
-								 "SimpleChunkSystem.System.DynamicDataTest_SameDataInOtherChannel",
-								 EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+                                 "SimpleChunkSystem.System.DynamicDataTest_SameDataInOtherChannel",
+                                 EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
 FORCEINLINE bool FChunk_ChunkSystem_DynamicDataTest_SameDataInOtherChannel::RunTest(const FString& Parameters)
 {
@@ -234,7 +265,7 @@ FORCEINLINE bool FChunk_ChunkSystem_DynamicDataTest_SameDataInOtherChannel::RunT
 	}
 
 	constexpr int32 ChunkSize = 1;
-	FChunkSystem_DynamicData<>* ChunkSystem = new FChunkSystem_DynamicData(World, ChunkSize);
+	TChunkSystem_DynamicData<>* ChunkSystem = new TChunkSystem_DynamicData(World, ChunkSize);
 	TestTrue(TEXT("ChunkSystem is valid"), ChunkSystem != nullptr);
 
 	const FVector TestChannel_Location = FVector(1000, 2000, 3000);
@@ -245,20 +276,26 @@ FORCEINLINE bool FChunk_ChunkSystem_DynamicDataTest_SameDataInOtherChannel::RunT
 	const FName TestChannel_ChannelName2 = TEXT("TestChannel2");
 	const int32 TestChannel2_Value = 84;
 
-	ChunkSystem->FindOrAddChannel<FData_UnitTest>(TestChannel_ChannelName, TestChannel_Location).GetMutablePtr<FData_UnitTest>()->Value = TestChannel_Value;
-	ChunkSystem->FindOrAddChannel<FData_UnitTest>(TestChannel_ChannelName2, TestChannel_Location).GetMutablePtr<FData_UnitTest>()->Value = TestChannel2_Value;
+	ChunkSystem->FindOrAddChannel<FData_UnitTest>(TestChannel_ChannelName, TestChannel_Location).GetMutablePtr<
+		FData_UnitTest>()->Value = TestChannel_Value;
+	ChunkSystem->FindOrAddChannel<FData_UnitTest>(TestChannel_ChannelName2, TestChannel_Location).GetMutablePtr<
+		FData_UnitTest>()->Value = TestChannel2_Value;
 
-	TestTrue(TEXT("Has Channel FData_UnitTest"), ChunkSystem->HasChannel<FData_UnitTest>(TestChannel_ChannelName, TestChannel_Location));
-	TestTrue(TEXT("Has Channel FData_UnitTest in other channel"), ChunkSystem->HasChannel<FData_UnitTest>(TestChannel_ChannelName2, TestChannel_Location));
+	TestTrue(TEXT("Has Channel FData_UnitTest"),
+	         ChunkSystem->HasChannel<FData_UnitTest>(TestChannel_ChannelName, TestChannel_Location));
+	TestTrue(TEXT("Has Channel FData_UnitTest in other channel"),
+	         ChunkSystem->HasChannel<FData_UnitTest>(TestChannel_ChannelName2, TestChannel_Location));
 
 	{
-		FInstancedStruct& Data = ChunkSystem->FindOrAddChannel<FData_UnitTest>(TestChannel_ChannelName, TestChannel_Location);
+		FInstancedStruct& Data = ChunkSystem->FindOrAddChannel<FData_UnitTest>(TestChannel_ChannelName,
+		                                                                       TestChannel_Location);
 		const FData_UnitTest* Data_Ptr = Data.GetPtr<FData_UnitTest>();
 		TestEqual(TEXT("Data Value"), Data_Ptr->Value, TestChannel_Value);
 	}
 
 	{
-		FInstancedStruct& Data_2 = ChunkSystem->FindOrAddChannel<FData_UnitTest>(TestChannel_ChannelName2, TestChannel_Location);
+		FInstancedStruct& Data_2 = ChunkSystem->FindOrAddChannel<FData_UnitTest>(TestChannel_ChannelName2,
+			TestChannel_Location);
 		const FData_UnitTest* Data_2_Ptr = Data_2.GetPtr<FData_UnitTest>();
 		TestEqual(TEXT("Data Value in other channel"), Data_2_Ptr->Value, TestChannel2_Value);
 	}
@@ -269,8 +306,8 @@ FORCEINLINE bool FChunk_ChunkSystem_DynamicDataTest_SameDataInOtherChannel::RunT
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FChunk_ChunkSystem_Serialize,
-								 "SimpleChunkSystem.System.Serialize",
-								 EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+                                 "SimpleChunkSystem.System.Serialize",
+                                 EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
 FORCEINLINE bool FChunk_ChunkSystem_Serialize::RunTest(const FString& Parameters)
 {
@@ -295,7 +332,7 @@ FORCEINLINE bool FChunk_ChunkSystem_Serialize::RunTest(const FString& Parameters
 	}
 
 	constexpr int32 ChunkSize = 1;
-	FChunkSystem_DynamicData<>* ChunkSystem = new FChunkSystem_DynamicData(World, ChunkSize);
+	TChunkSystem_DynamicData<>* ChunkSystem = new TChunkSystem_DynamicData(World, ChunkSize);
 	TestTrue(TEXT("ChunkSystem is valid"), ChunkSystem != nullptr);
 
 	const FVector TestChannel_Location = FVector(1000, 2000, 3000);
@@ -303,7 +340,8 @@ FORCEINLINE bool FChunk_ChunkSystem_Serialize::RunTest(const FString& Parameters
 	const int32 TestChannel_Value = 42;
 
 	{
-		ChunkSystem->FindOrAddChannel<FData_UnitTest>(TestChannel_ChannelName, TestChannel_Location).GetMutablePtr<FData_UnitTest>()->Value = TestChannel_Value;
+		ChunkSystem->FindOrAddChannel<FData_UnitTest>(TestChannel_ChannelName, TestChannel_Location).GetMutablePtr<
+			FData_UnitTest>()->Value = TestChannel_Value;
 	}
 
 	const FVector TestChannel2_Location = FVector(2000, 3000, 4000);
@@ -312,7 +350,8 @@ FORCEINLINE bool FChunk_ChunkSystem_Serialize::RunTest(const FString& Parameters
 	const int32 TestChannel2_Value2 = 168;
 
 	{
-		FInstancedStruct& Data_2 = ChunkSystem->FindOrAddChannel<FData2_UnitTest>(TestChannel2_ChannelName, TestChannel2_Location);
+		FInstancedStruct& Data_2 = ChunkSystem->FindOrAddChannel<FData2_UnitTest>(TestChannel2_ChannelName,
+			TestChannel2_Location);
 		FData2_UnitTest* Data_2_Ptr = Data_2.GetMutablePtr<FData2_UnitTest>();
 		Data_2_Ptr->Value = TestChannel2_Value;
 		Data_2_Ptr->Value2 = TestChannel2_Value2;
@@ -324,31 +363,38 @@ FORCEINLINE bool FChunk_ChunkSystem_Serialize::RunTest(const FString& Parameters
 	const FName TestChannel3_Name2 = TEXT("TestName2");
 
 	{
-		FInstancedStruct& Data_3 = ChunkSystem->FindOrAddChannel<FData3_UnitTest>(TestChannel3_ChannelName, TestChannel3_Location);
+		FInstancedStruct& Data_3 = ChunkSystem->FindOrAddChannel<FData3_UnitTest>(TestChannel3_ChannelName,
+			TestChannel3_Location);
 		FData3_UnitTest* Data_3_Ptr = Data_3.GetMutablePtr<FData3_UnitTest>();
 		Data_3_Ptr->Name = TestChannel3_Name;
 		Data_3_Ptr->Name2 = TestChannel3_Name2;
 	}
 
-	TestTrue(TEXT("Has Channel FData_UnitTest"), ChunkSystem->HasChannel<FData_UnitTest>(TestChannel_ChannelName, TestChannel_Location));
-	TestTrue(TEXT("Has Channel FData2_UnitTest"), ChunkSystem->HasChannel<FData2_UnitTest>(TestChannel2_ChannelName, TestChannel2_Location));
-	TestTrue(TEXT("Has Channel FData3_UnitTest"), ChunkSystem->HasChannel<FData3_UnitTest>(TestChannel3_ChannelName, TestChannel3_Location));
+	TestTrue(TEXT("Has Channel FData_UnitTest"),
+	         ChunkSystem->HasChannel<FData_UnitTest>(TestChannel_ChannelName, TestChannel_Location));
+	TestTrue(TEXT("Has Channel FData2_UnitTest"),
+	         ChunkSystem->HasChannel<FData2_UnitTest>(TestChannel2_ChannelName, TestChannel2_Location));
+	TestTrue(TEXT("Has Channel FData3_UnitTest"),
+	         ChunkSystem->HasChannel<FData3_UnitTest>(TestChannel3_ChannelName, TestChannel3_Location));
 
 	{
-		FInstancedStruct& Data = ChunkSystem->FindOrAddChannel<FData_UnitTest>(TestChannel_ChannelName, TestChannel_Location);
+		FInstancedStruct& Data = ChunkSystem->FindOrAddChannel<FData_UnitTest>(TestChannel_ChannelName,
+		                                                                       TestChannel_Location);
 		const FData_UnitTest* Data_Ptr = Data.GetPtr<FData_UnitTest>();
 		TestEqual(TEXT("Data Value"), Data_Ptr->Value, TestChannel_Value);
 	}
 
 	{
-		FInstancedStruct& Data_2 = ChunkSystem->FindOrAddChannel<FData2_UnitTest>(TestChannel2_ChannelName, TestChannel2_Location);
+		FInstancedStruct& Data_2 = ChunkSystem->FindOrAddChannel<FData2_UnitTest>(TestChannel2_ChannelName,
+			TestChannel2_Location);
 		const FData2_UnitTest* Data_2_Ptr = Data_2.GetPtr<FData2_UnitTest>();
 		TestEqual(TEXT("Data_2 Value"), Data_2_Ptr->Value, TestChannel2_Value);
 		TestEqual(TEXT("Data_2 Value2"), Data_2_Ptr->Value2, TestChannel2_Value2);
 	}
 
 	{
-		FInstancedStruct& Data_3 = ChunkSystem->FindOrAddChannel<FData3_UnitTest>(TestChannel3_ChannelName, TestChannel3_Location);
+		FInstancedStruct& Data_3 = ChunkSystem->FindOrAddChannel<FData3_UnitTest>(TestChannel3_ChannelName,
+			TestChannel3_Location);
 		const FData3_UnitTest* Data_3_Ptr = Data_3.GetPtr<FData3_UnitTest>();
 		TestEqual(TEXT("Data_3 Name"), Data_3_Ptr->Name, TestChannel3_Name);
 		TestEqual(TEXT("Data_3 Name2"), Data_3_Ptr->Name2, TestChannel3_Name2);
@@ -363,27 +409,30 @@ FORCEINLINE bool FChunk_ChunkSystem_Serialize::RunTest(const FString& Parameters
 
 	delete ChunkSystem;
 
-	ChunkSystem = new FChunkSystem_DynamicData(World, ChunkSize);
+	ChunkSystem = new TChunkSystem_DynamicData(World, ChunkSize);
 	TestTrue(TEXT("ChunkSystem is valid after re-creation"), ChunkSystem != nullptr);
 
 	FMemoryReader MemoryReader(SerializedData, true);
 	ChunkSystem->Serialize(MemoryReader);
 
 	{
-		FInstancedStruct& Data = ChunkSystem->FindOrAddChannel<FData_UnitTest>(TestChannel_ChannelName, TestChannel_Location);
+		FInstancedStruct& Data = ChunkSystem->FindOrAddChannel<FData_UnitTest>(TestChannel_ChannelName,
+		                                                                       TestChannel_Location);
 		const FData_UnitTest* Data_Ptr = Data.GetPtr<FData_UnitTest>();
 		TestEqual(TEXT("Data Value"), Data_Ptr->Value, TestChannel_Value);
 	}
 
 	{
-		FInstancedStruct& Data_2 = ChunkSystem->FindOrAddChannel<FData2_UnitTest>(TestChannel2_ChannelName, TestChannel2_Location);
+		FInstancedStruct& Data_2 = ChunkSystem->FindOrAddChannel<FData2_UnitTest>(TestChannel2_ChannelName,
+			TestChannel2_Location);
 		const FData2_UnitTest* Data_2_Ptr = Data_2.GetPtr<FData2_UnitTest>();
 		TestEqual(TEXT("Data_2 Value"), Data_2_Ptr->Value, TestChannel2_Value);
 		TestEqual(TEXT("Data_2 Value2"), Data_2_Ptr->Value2, TestChannel2_Value2);
 	}
 
 	{
-		FInstancedStruct& Data_3 = ChunkSystem->FindOrAddChannel<FData3_UnitTest>(TestChannel3_ChannelName, TestChannel3_Location);
+		FInstancedStruct& Data_3 = ChunkSystem->FindOrAddChannel<FData3_UnitTest>(TestChannel3_ChannelName,
+			TestChannel3_Location);
 		const FData3_UnitTest* Data_3_Ptr = Data_3.GetPtr<FData3_UnitTest>();
 		TestEqual(TEXT("Data_3 Name"), Data_3_Ptr->Name, TestChannel3_Name);
 		TestEqual(TEXT("Data_3 Name2"), Data_3_Ptr->Name2, TestChannel3_Name2);

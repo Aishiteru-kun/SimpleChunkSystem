@@ -12,9 +12,18 @@ public:
 public:
 	virtual void Serialize(FArchive& Ar);
 
+	virtual void DrawDebug(const UWorld* World, const TFunction<FVector(const FIntPoint&)>& Convertor) const;
+
 protected:
-	FORCEINLINE const FIntPoint& GetTopLeft() const { return TopLeft; }
-	FORCEINLINE const FIntPoint& GetBottomRight() const { return BottomRight; }
+	FORCEINLINE const FIntPoint& GetTopLeft() const
+	{
+		return TopLeft;
+	}
+
+	FORCEINLINE const FIntPoint& GetBottomRight() const
+	{
+		return BottomRight;
+	}
 
 private:
 	FIntPoint TopLeft;

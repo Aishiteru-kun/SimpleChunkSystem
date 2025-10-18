@@ -23,7 +23,9 @@ public:
 			SCHUNK_LOG(LogChunkLibrary, Warning, TEXT("Invalid world context provided."));
 		}
 
-		const FIntVector Origin = !InWorldContext || !InWorldContext->GetWorld() ? InWorldContext->GetWorld()->OriginLocation : FIntVector::ZeroValue;
+		const FIntVector Origin = InWorldContext && InWorldContext->GetWorld()
+			                          ? InWorldContext->GetWorld()->OriginLocation
+			                          : FIntVector::ZeroValue;
 		const double CellSize = GetCellSize();
 
 		const int32 X = FMath::FloorToInt((InGlobalLocation.X - Origin.X) / CellSize);
@@ -41,7 +43,9 @@ public:
 			return FVector2D::ZeroVector;
 		}
 
-		const FIntVector Origin = !InWorldContext || !InWorldContext->GetWorld() ? InWorldContext->GetWorld()->OriginLocation : FIntVector::ZeroValue;
+		const FIntVector Origin = InWorldContext && InWorldContext->GetWorld()
+			                          ? InWorldContext->GetWorld()->OriginLocation
+			                          : FIntVector::ZeroValue;
 		const double CellSize = GetCellSize();
 
 		const float X = Origin.X + InGridPoint.X * CellSize;
@@ -66,5 +70,8 @@ public:
 	}
 
 	UFUNCTION(BlueprintCallable, Category = "ChunkSystem")
-	static double GetCellSize() { return 1000.0; }
+	static double GetCellSize()
+	{
+		return 1000.0;
+	}
 };

@@ -12,24 +12,28 @@ DEFINE_LOG_CATEGORY_STATIC(LogSChunkSystemLocal_DynamicData, Log, All)
  * The system extends the generic chunk system with helpers for finding,
  * creating and removing data channels identified by name.
  */
-template <bool bIsSerialize = true, FConvertWorldToGrid FuncConv = UChunkBlueprintFunctionLibrary::ConvertGlobalLocationToGrid>
-class FChunkSystem_DynamicData final : public FChunkSystemBase<FChunk_DynamicData, bIsSerialize, FuncConv>
+template <bool bIsSerialize = true, FConvertWorldToGrid FuncConv =
+	          UChunkBlueprintFunctionLibrary::ConvertGlobalLocationToGrid>
+class TChunkSystem_DynamicData final : public TChunkSystemBase<FChunk_DynamicData, bIsSerialize, FuncConv>
 {
 	friend class FChunk_ChunkSystem_DynamicDataTest;
 
-	using Super = FChunkSystemBase<FChunk_DynamicData, bIsSerialize, FuncConv>;
+	using Super = TChunkSystemBase<FChunk_DynamicData, bIsSerialize, FuncConv>;
 
 public:
-	explicit FChunkSystem_DynamicData(const UObject* InWorldContext, const int32 InChunkSize = 15)
-		: FChunkSystemBase<FChunk_DynamicData, bIsSerialize, FuncConv>(InWorldContext, InChunkSize)
+	explicit TChunkSystem_DynamicData(const UObject* InWorldContext, const int32 InChunkSize = 15)
+		: TChunkSystemBase<FChunk_DynamicData, bIsSerialize, FuncConv>(InWorldContext, InChunkSize)
 	{
-		SCHUNK_LOG(LogSChunkSystemLocal_DynamicData, Log, TEXT("FChunkSystem initialized with chunk size %d"), InChunkSize);
+		SCHUNK_LOG(LogSChunkSystemLocal_DynamicData, Log, TEXT("FChunkSystem initialized with chunk size %d"),
+		           InChunkSize);
 	}
 
 public:
 	template <typename TStruct>
 	FORCEINLINE FInstancedStruct* GetChannel(const FName Name, const FVector& InLocation)
 	{
+		TRACE_CPUPROFILER_EVENT_SCOPE(TChunkSystem_DynamicData::Template_GetChannel)
+
 		const FIntPoint GridPoint = this->ConvertWorldToGridFunc(this->GetWorld(), InLocation);
 		return GetChannel<TStruct>(Name, GridPoint);
 	}
@@ -37,18 +41,16 @@ public:
 	template <typename TStruct>
 	FORCEINLINE FInstancedStruct* GetChannel(const FName Name, const FIntPoint& InGridPoint)
 	{
+		TRACE_CPUPROFILER_EVENT_SCOPE(TChunkSystem_DynamicData::Template_GetChannel)
+
 		const FIntPoint ChunkPoint = this->ConvertGlobalToChunkGrid(InGridPoint);
 		if (!this->Chunks.Contains(ChunkPoint))
 		{
-			SCHUNK_LOG(LogSChunkSystemLocal_DynamicData, Log, TEXT("Chunk does not exist at %s"),
-			           *ChunkPoint.ToString());
 			return nullptr;
 		}
 
 		if (!HasChannel<TStruct>(Name, InGridPoint))
 		{
-			SCHUNK_LOG(LogSChunkSystemLocal_DynamicData, Log, TEXT("Channel '%s' of type '%s' does not exist at %s"),
-			           *Name.ToString(), *TStruct::StaticStruct()->GetName(), *InGridPoint.ToString());
 			return nullptr;
 		}
 
@@ -57,24 +59,24 @@ public:
 
 	FORCEINLINE FInstancedStruct* GetChannel(const FName Name, const FVector& InLocation, UScriptStruct* Type)
 	{
+		TRACE_CPUPROFILER_EVENT_SCOPE(TChunkSystem_DynamicData::GetChannel)
+
 		const FIntPoint GridPoint = this->ConvertWorldToGridFunc(this->GetWorld(), InLocation);
 		return GetChannel(Name, GridPoint, Type);
 	}
 
 	FORCEINLINE FInstancedStruct* GetChannel(const FName Name, const FIntPoint& InGridPoint, UScriptStruct* Type)
 	{
+		TRACE_CPUPROFILER_EVENT_SCOPE(TChunkSystem_DynamicData::GetChannel)
+
 		const FIntPoint ChunkPoint = this->ConvertGlobalToChunkGrid(InGridPoint);
 		if (!this->Chunks.Contains(ChunkPoint))
 		{
-			SCHUNK_LOG(LogSChunkSystemLocal_DynamicData, Log, TEXT("Chunk does not exist at %s"),
-			           *ChunkPoint.ToString());
 			return nullptr;
 		}
 
 		if (!HasChannel(Name, InGridPoint, Type))
 		{
-			SCHUNK_LOG(LogSChunkSystemLocal_DynamicData, Log, TEXT("Channel '%s' of type '%s' does not exist at %s"),
-			           *Name.ToString(), *Type->GetName(), *InGridPoint.ToString());
 			return nullptr;
 		}
 
@@ -84,6 +86,8 @@ public:
 	template <typename TStruct>
 	FORCEINLINE FInstancedStruct& FindOrAddChannel(const FName Name, const FVector& InLocation)
 	{
+		TRACE_CPUPROFILER_EVENT_SCOPE(TChunkSystem_DynamicData::Template_FindOrAddChannel)
+
 		const FIntPoint GridPoint = this->ConvertWorldToGridFunc(this->GetWorld(), InLocation);
 		return FindOrAddChannel<TStruct>(Name, GridPoint);
 	}
@@ -91,6 +95,8 @@ public:
 	template <typename TStruct>
 	FORCEINLINE FInstancedStruct& FindOrAddChannel(const FName Name, const FIntPoint& InGridPoint)
 	{
+		TRACE_CPUPROFILER_EVENT_SCOPE(TChunkSystem_DynamicData::Template_FindOrAddChannel)
+
 		const FIntPoint ChunkPoint = this->ConvertGlobalToChunkGrid(InGridPoint);
 		this->TryMakeChunk(ChunkPoint);
 
@@ -99,12 +105,16 @@ public:
 
 	FORCEINLINE FInstancedStruct& FindOrAddChannel(const FName Name, const FVector& InLocation, UScriptStruct* Type)
 	{
+		TRACE_CPUPROFILER_EVENT_SCOPE(TChunkSystem_DynamicData::FindOrAddChannel)
+
 		const FIntPoint ChunkPoint = this->ConvertWorldToGridFunc(this->GetWorld(), InLocation);
 		return FindOrAddChannel(Name, ChunkPoint, Type);
 	}
 
 	FORCEINLINE FInstancedStruct& FindOrAddChannel(const FName Name, const FIntPoint& InGridPoint, UScriptStruct* Type)
 	{
+		TRACE_CPUPROFILER_EVENT_SCOPE(TChunkSystem_DynamicData::FindOrAddChannel)
+
 		const FIntPoint ChunkPoint = this->ConvertGlobalToChunkGrid(InGridPoint);
 		this->TryMakeChunk(ChunkPoint);
 
@@ -114,6 +124,8 @@ public:
 	template <typename TStruct>
 	FORCEINLINE TArray<FInstancedStruct*> FindOrAddChannels(const FName Name, const TSet<FVector>& InLocations)
 	{
+		TRACE_CPUPROFILER_EVENT_SCOPE(TChunkSystem_DynamicData::Template_FindOrAddChannels)
+
 		TSet<FIntPoint> GridLocations;
 		Algo::Transform(InLocations, GridLocations,
 		                [this](const FVector& Location) -> FIntPoint
@@ -127,6 +139,8 @@ public:
 	template <typename TStruct>
 	FORCEINLINE TArray<FInstancedStruct*> FindOrAddChannels(const FName Name, const TSet<FIntPoint>& InGridLocations)
 	{
+		TRACE_CPUPROFILER_EVENT_SCOPE(TChunkSystem_DynamicData::Template_FindOrAddChannels)
+
 		TArray<FInstancedStruct*> Channels;
 
 		for (const TPair<FIntPoint, TSet<FIntPoint>>& ChunkToGrid : this->SplitGridLocationsToChunks(InGridLocations))
@@ -145,22 +159,27 @@ public:
 		return Channels;
 	}
 
-	FORCEINLINE TArray<FInstancedStruct*> FindOrAddChannels(const FName Name, const TSet<FVector>& InLocations, UScriptStruct* Type)
+	FORCEINLINE TArray<FInstancedStruct*> FindOrAddChannels(const FName Name, const TSet<FVector>& InLocations,
+	                                                        UScriptStruct* Type)
 	{
+		TRACE_CPUPROFILER_EVENT_SCOPE(TChunkSystem_DynamicData::FindOrAddChannels)
+
 		TSet<FIntPoint> GridLocations;
 		Algo::Transform(InLocations, GridLocations,
-						[this](const FVector& Location) -> FIntPoint
-						{
-							return this->ConvertWorldToGridFunc(this->GetWorld(), Location);
-						});
+		                [this](const FVector& Location) -> FIntPoint
+		                {
+			                return this->ConvertWorldToGridFunc(this->GetWorld(), Location);
+		                });
 
 		return FindOrAddChannels(Name, GridLocations, Type);
 	}
 
-	FORCEINLINE TArray<FInstancedStruct*> FindOrAddChannels(const FName Name, const TSet<FIntPoint>& InGridLocations, UScriptStruct* Type)
+	FORCEINLINE TArray<FInstancedStruct*> FindOrAddChannels(const FName Name, const TSet<FIntPoint>& InGridLocations,
+	                                                        UScriptStruct* Type)
 	{
-		TArray<FInstancedStruct*> Channels;
+		TRACE_CPUPROFILER_EVENT_SCOPE(TChunkSystem_DynamicData::FindOrAddChannels)
 
+		TArray<FInstancedStruct*> Channels;
 		for (const TPair<FIntPoint, TSet<FIntPoint>>& ChunkToGrid : this->SplitGridLocationsToChunks(InGridLocations))
 		{
 			const FIntPoint& ChunkPoint = ChunkToGrid.Key;
@@ -180,6 +199,8 @@ public:
 	template <typename TStruct>
 	FORCEINLINE bool TryRemoveChannel(const FName Name, const FVector& InLocation)
 	{
+		TRACE_CPUPROFILER_EVENT_SCOPE(TChunkSystem_DynamicData::Template_TryRemoveChannel)
+
 		const FIntPoint GridPoint = this->ConvertWorldToGridFunc(this->GetWorld(), InLocation);
 		return TryRemoveChannel<TStruct>(Name, GridPoint);
 	}
@@ -187,10 +208,11 @@ public:
 	template <typename TStruct>
 	FORCEINLINE bool TryRemoveChannel(const FName Name, const FIntPoint& InGridLocation)
 	{
+		TRACE_CPUPROFILER_EVENT_SCOPE(TChunkSystem_DynamicData::Template_TryRemoveChannel)
+
 		const FIntPoint ChunkPoint = this->ConvertGlobalToChunkGrid(InGridLocation);
 		if (!this->Chunks.Contains(ChunkPoint))
 		{
-			SCHUNK_LOG(LogSChunkSystemLocal_DynamicData, Warning, TEXT("Chunk does not exist at %s"), *ChunkPoint.ToString());
 			return false;
 		}
 
@@ -199,16 +221,19 @@ public:
 
 	FORCEINLINE bool TryRemoveChannel(const FName Name, const FVector& InLocation, UScriptStruct* Type)
 	{
+		TRACE_CPUPROFILER_EVENT_SCOPE(TChunkSystem_DynamicData::TryRemoveChannel)
+
 		const FIntPoint GridPoint = this->ConvertWorldToGridFunc(this->GetWorld(), InLocation);
 		return TryRemoveChannel(Name, GridPoint, Type);
 	}
 
 	FORCEINLINE bool TryRemoveChannel(const FName Name, const FIntPoint& InGridLocation, UScriptStruct* Type)
 	{
+		TRACE_CPUPROFILER_EVENT_SCOPE(TChunkSystem_DynamicData::TryRemoveChannel)
+
 		const FIntPoint ChunkPoint = this->ConvertGlobalToChunkGrid(InGridLocation);
 		if (!this->Chunks.Contains(ChunkPoint))
 		{
-			SCHUNK_LOG(LogSChunkSystemLocal_DynamicData, Warning, TEXT("Chunk does not exist at %s"), *ChunkPoint.ToString());
 			return false;
 		}
 
@@ -218,6 +243,8 @@ public:
 	template <typename TStruct>
 	FORCEINLINE bool TryRemoveChannels(const FName Name, const TSet<FVector>& InLocations)
 	{
+		TRACE_CPUPROFILER_EVENT_SCOPE(TChunkSystem_DynamicData::Template_TryRemoveChannels)
+
 		TSet<FIntPoint> GridLocations;
 		Algo::Transform(InLocations, GridLocations,
 		                [this](const FVector& Location) -> FIntPoint
@@ -231,6 +258,8 @@ public:
 	template <typename TStruct>
 	FORCEINLINE bool TryRemoveChannels(const FName Name, const TSet<FIntPoint>& InGridLocations)
 	{
+		TRACE_CPUPROFILER_EVENT_SCOPE(TChunkSystem_DynamicData::Template_TryRemoveChannels)
+
 		bool bRemoved = false;
 		for (const TPair<FIntPoint, TSet<FIntPoint>>& ChunkToGrid : this->SplitGridLocationsToChunks(InGridLocations))
 		{
@@ -239,7 +268,6 @@ public:
 
 			if (!this->Chunks.Contains(ChunkPoint))
 			{
-				SCHUNK_LOG(LogSChunkSystemLocal_DynamicData, Warning, TEXT("Chunk does not exist at %s"), *ChunkPoint.ToString());
 				continue;
 			}
 
@@ -254,6 +282,8 @@ public:
 
 	FORCEINLINE bool TryRemoveChannels(const FName Name, const TSet<FVector>& InLocations, UScriptStruct* Type)
 	{
+		TRACE_CPUPROFILER_EVENT_SCOPE(TChunkSystem_DynamicData::TryRemoveChannels)
+
 		TSet<FIntPoint> GridLocations;
 		Algo::Transform(InLocations, GridLocations,
 		                [this](const FVector& Location) -> FIntPoint
@@ -266,6 +296,8 @@ public:
 
 	FORCEINLINE bool TryRemoveChannels(const FName Name, const TSet<FIntPoint>& InGridLocations, UScriptStruct* Type)
 	{
+		TRACE_CPUPROFILER_EVENT_SCOPE(TChunkSystem_DynamicData::TryRemoveChannels)
+
 		bool bRemoved = false;
 		for (const TPair<FIntPoint, TSet<FIntPoint>>& ChunkToGrid : this->SplitGridLocationsToChunks(InGridLocations))
 		{
@@ -274,7 +306,6 @@ public:
 
 			if (!this->Chunks.Contains(ChunkPoint))
 			{
-				SCHUNK_LOG(LogSChunkSystemLocal_DynamicData, Warning, TEXT("Chunk does not exist at %s"), *ChunkPoint.ToString());
 				continue;
 			}
 
@@ -290,6 +321,8 @@ public:
 	template <typename TStruct>
 	FORCEINLINE bool HasChannel(const FName Name, const FVector& InLocation) const
 	{
+		TRACE_CPUPROFILER_EVENT_SCOPE(TChunkSystem_DynamicData_HasChannel::Template_HasChannel)
+
 		const FIntPoint GridPoint = this->ConvertWorldToGridFunc(this->GetWorld(), InLocation);
 		return HasChannel<TStruct>(Name, GridPoint);
 	}
@@ -297,22 +330,27 @@ public:
 	template <typename TStruct>
 	FORCEINLINE bool HasChannel(const FName Name, const FIntPoint& InGridLocation) const
 	{
+		TRACE_CPUPROFILER_EVENT_SCOPE(TChunkSystem_DynamicData_HasChannel::Template_HasChannel)
+
 		const FIntPoint ChunkPoint = this->ConvertGlobalToChunkGrid(InGridLocation);
 		return this->Chunks[ChunkPoint]->HasChannel<TStruct>(Name, InGridLocation);
 	}
 
 	FORCEINLINE bool HasChannel(const FName Name, const FVector& InLocation, UScriptStruct* Type) const
 	{
+		TRACE_CPUPROFILER_EVENT_SCOPE(TChunkSystem_DynamicData_HasChannel::HasChannel)
+
 		const FIntPoint GridPoint = this->ConvertWorldToGridFunc(this->GetWorld(), InLocation);
 		return HasChannel(Name, GridPoint, Type);
 	}
 
 	FORCEINLINE bool HasChannel(const FName Name, const FIntPoint& InGridLocation, UScriptStruct* Type) const
 	{
+		TRACE_CPUPROFILER_EVENT_SCOPE(TChunkSystem_DynamicData_HasChannel::HasChannel)
+
 		const FIntPoint ChunkPoint = this->ConvertGlobalToChunkGrid(InGridLocation);
 		if (!this->Chunks.Contains(ChunkPoint))
 		{
-			SCHUNK_LOG(LogSChunkSystemLocal_DynamicData, Warning, TEXT("Chunk does not exist at %s"), *ChunkPoint.ToString());
 			return false;
 		}
 
@@ -322,6 +360,8 @@ public:
 	template <typename TStruct>
 	FORCEINLINE bool HasChannels(const FName Name, const TSet<FVector>& InLocations) const
 	{
+		TRACE_CPUPROFILER_EVENT_SCOPE(TChunkSystem_DynamicData::Template_HasChannels)
+
 		TSet<FIntPoint> GridLocations;
 		Algo::Transform(InLocations, GridLocations,
 		                [this](const FVector& Location) -> FIntPoint
@@ -335,6 +375,8 @@ public:
 	template <typename TStruct>
 	FORCEINLINE bool HasChannels(const FName Name, const TSet<FIntPoint>& InGridLocations) const
 	{
+		TRACE_CPUPROFILER_EVENT_SCOPE(TChunkSystem_DynamicData::Template_HasChannels)
+
 		for (const TPair<FIntPoint, TSet<FIntPoint>>& ChunkToGrid : this->SplitGridLocationsToChunks(InGridLocations))
 		{
 			const FIntPoint& ChunkPoint = ChunkToGrid.Key;
@@ -342,7 +384,6 @@ public:
 
 			if (!this->Chunks.Contains(ChunkPoint))
 			{
-				SCHUNK_LOG(LogSChunkSystemLocal_DynamicData, Warning, TEXT("Chunk does not exist at %s"), *ChunkPoint.ToString());
 				return false;
 			}
 
@@ -360,6 +401,8 @@ public:
 
 	FORCEINLINE bool HasChannels(const FName Name, const TSet<FVector>& InLocations, UScriptStruct* Type) const
 	{
+		TRACE_CPUPROFILER_EVENT_SCOPE(TChunkSystem_DynamicData::HasChannels)
+
 		TSet<FIntPoint> GridLocations;
 		Algo::Transform(InLocations, GridLocations,
 		                [this](const FVector& Location) -> FIntPoint
@@ -372,6 +415,8 @@ public:
 
 	FORCEINLINE bool HasChannels(const FName Name, const TSet<FIntPoint>& InGridLocations, UScriptStruct* Type) const
 	{
+		TRACE_CPUPROFILER_EVENT_SCOPE(TChunkSystem_DynamicData::HasChannels)
+
 		for (const TPair<FIntPoint, TSet<FIntPoint>>& ChunkToGrid : this->SplitGridLocationsToChunks(InGridLocations))
 		{
 			const FIntPoint& ChunkPoint = ChunkToGrid.Key;
@@ -379,7 +424,6 @@ public:
 
 			if (!this->Chunks.Contains(ChunkPoint))
 			{
-				SCHUNK_LOG(LogSChunkSystemLocal_DynamicData, Warning, TEXT("Chunk does not exist at %s"), *ChunkPoint.ToString());
 				return false;
 			}
 
@@ -393,5 +437,14 @@ public:
 		}
 
 		return true;
+	}
+
+	// Debug
+	FORCEINLINE void DrawDebug(const TFunction<FVector(const FIntPoint&)>& InConvertor) const
+	{
+		for (const TPair<FIntPoint, TSharedPtr<FChunk_DynamicData>>& Chunk : this->Chunks)
+		{
+			Chunk.Value->DrawDebug(this->GetWorld(), InConvertor);
+		}
 	}
 };

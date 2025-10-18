@@ -17,7 +17,7 @@ struct SIMPLECHUNKSYSTEM_API FData_UnitTest : public FCellBaseInfo
 		return true;
 	}
 
-	friend FArchive& operator<<(FArchive & Ar, FData_UnitTest & Data)
+	friend FArchive& operator<<(FArchive& Ar, FData_UnitTest& Data)
 	{
 		Data.Serialize(Ar);
 		return Ar;
@@ -39,7 +39,7 @@ struct SIMPLECHUNKSYSTEM_API FData2_UnitTest : public FCellBaseInfo
 		return true;
 	}
 
-	friend FArchive& operator<<(FArchive & Ar, FData2_UnitTest & Data)
+	friend FArchive& operator<<(FArchive& Ar, FData2_UnitTest& Data)
 	{
 		Data.Serialize(Ar);
 		return Ar;
@@ -61,7 +61,7 @@ struct SIMPLECHUNKSYSTEM_API FData3_UnitTest : public FCellBaseInfo
 		return true;
 	}
 
-	friend FArchive& operator<<(FArchive & Ar, FData3_UnitTest & Data)
+	friend FArchive& operator<<(FArchive& Ar, FData3_UnitTest& Data)
 	{
 		Data.Serialize(Ar);
 		return Ar;

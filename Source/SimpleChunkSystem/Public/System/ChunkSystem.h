@@ -25,7 +25,7 @@ using FConvertWorldToGrid = FIntPoint(*)(const UObject*, const FVector&);
  */
 template <typename Type, bool bIsSerialize = true, FConvertWorldToGrid FuncConv =
 	          UChunkBlueprintFunctionLibrary::ConvertGlobalLocationToGrid>
-class FChunkSystemBase
+class TChunkSystemBase
 {
 	static_assert(TIsDerivedFrom<Type, FChunkBase>::Value, "Type must be derived from FChunkBase");
 
@@ -37,7 +37,7 @@ protected:
 	TFunction<FIntPoint(const UObject*, const FVector&)> ConvertWorldToGridFunc = FuncConv;
 
 public:
-	FChunkSystemBase(const UObject* InWorldContext, const int32 InChunkSize)
+	TChunkSystemBase(const UObject* InWorldContext, const int32 InChunkSize)
 		: World(InWorldContext ? InWorldContext->GetWorld() : nullptr)
 		  , ChunkSize(FMath::Max(InChunkSize, DefaultChunkSize))
 	{
@@ -54,7 +54,7 @@ public:
 		}
 	}
 
-	virtual ~FChunkSystemBase() = default;
+	virtual ~TChunkSystemBase() = default;
 
 public:
 	virtual void Serialize(FArchive& Ar)
@@ -124,6 +124,31 @@ public:
 		return TryRemoveChunk(ChunkPoint);
 	}
 
+	FORCEINLINE void Reserve(const int32 InAmount)
+	{
+		Chunks.Reserve(FMath::Max(InAmount, 0));
+	}
+
+	FORCEINLINE void Shrink()
+	{
+		Chunks.Shrink();
+	}
+
+	FORCEINLINE int32 Num() const
+	{
+		return Chunks.Num();
+	}
+
+	FORCEINLINE void Empty(const int32 ExpectedNumElements = 0)
+	{
+		Chunks.Empty(ExpectedNumElements);
+	}
+
+	FORCEINLINE bool IsEmpty() const
+	{
+		return Chunks.IsEmpty();
+	}
+
 	// Helper
 	FORCEINLINE const UWorld* GetWorld() const
 	{
@@ -137,8 +162,6 @@ protected:
 
 		if (Chunks.Contains(InChunkGridLocation))
 		{
-			SCHUNK_LOG(LogSChunkSystemLocal, Warning, TEXT("Chunk already exists at %s"),
-			           *InChunkGridLocation.ToString());
 			return false;
 		}
 
@@ -155,12 +178,9 @@ protected:
 
 		if (!Chunks.Contains(InChunkGridLocation))
 		{
-			SCHUNK_LOG(LogSChunkSystemLocal, Warning, TEXT("Chunk does not exist at %s"),
-			           *InChunkGridLocation.ToString());
 			return false;
 		}
 
-		SCHUNK_LOG(LogSChunkSystemLocal, Log, TEXT("Removing chunk at %s"), *InChunkGridLocation.ToString());
 		Chunks.Remove(InChunkGridLocation);
 		return true;
 	}
@@ -186,7 +206,8 @@ protected:
 		return FIntPoint(ChunkX, ChunkY);
 	}
 
-	FORCEINLINE TMap<FIntPoint, TSet<FIntPoint>> SplitGridLocationsToChunks(const TSet<FIntPoint>& InGridLocations) const
+	FORCEINLINE TMap<FIntPoint, TSet<FIntPoint>> SplitGridLocationsToChunks(
+		const TSet<FIntPoint>& InGridLocations) const
 	{
 		TRACE_CPUPROFILER_EVENT_SCOPE(FChunkSystemBase::SplitGridLocationsToChunks)
 
@@ -201,7 +222,8 @@ protected:
 		return ChunkToGrid;
 	}
 
-	FORCEINLINE void GetChunkBounds(const FIntPoint& InChunkGrid, FIntPoint& OutTopLeft, FIntPoint& OutBottomRight) const
+	FORCEINLINE void GetChunkBounds(const FIntPoint& InChunkGrid, FIntPoint& OutTopLeft,
+	                                FIntPoint& OutBottomRight) const
 	{
 		const int32 MinX = InChunkGrid.X * ChunkSize;
 		const int32 MaxX = (InChunkGrid.X + 1) * ChunkSize - 1;

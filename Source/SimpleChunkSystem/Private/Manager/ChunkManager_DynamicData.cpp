@@ -13,10 +13,43 @@ bool FChunkData_ObjectInfo::Serialize(FArchive& Ar)
 	return true;
 }
 
-FArchive& operator<<(FArchive& Ar, FChunkData_ObjectInfo& Data)
+FArchive& operator<<(FArchive& Ar, FChunkData_ObjectInfo& InData)
 {
-	Data.Serialize(Ar);
+	InData.Serialize(Ar);
 	return Ar;
+}
+
+void UChunkManager_DynamicData::Serialize(FArchive& Ar)
+{
+	Super::Serialize(Ar);
+
+	if (!ChunkSystem_DynamicData)
+	{
+		Initialize(GetInitialParameters());
+	}
+
+	if (ChunkSystem_DynamicData)
+	{
+		ChunkSystem_DynamicData->Serialize(Ar);
+	}
+}
+
+void UChunkManager_DynamicData::InitializeWithSharedContext(const UChunkManager_DynamicData* InSharedContextFromObject)
+{
+	if (!InSharedContextFromObject)
+	{
+		SCHUNK_LOG(LogSChunkManager_DynamicData, Warning, TEXT("SharedContextFromObject is null."));
+		return;
+	}
+
+	if (ChunkSystem_DynamicData == InSharedContextFromObject->ChunkSystem_DynamicData)
+	{
+		return;
+	}
+
+	ChunkSystem_DynamicData = InSharedContextFromObject->ChunkSystem_DynamicData;
+
+	OnInitialized();
 }
 
 void UChunkManager_DynamicData::SetChannelDataByLocation(const FName InChannelName, const FVector InLocation,
@@ -94,8 +127,8 @@ FInstancedStruct UChunkManager_DynamicData::GetChannelDataByLocation(const FName
 	if (!InstancedPtr)
 	{
 		SCHUNK_LOG(LogSChunkManager_DynamicData, Log,
-		         TEXT("Channel '%s' of type '%s' does not exist at location %s"),
-		         *InChannelName.ToString(), *InExpectedStruct->GetName(), *InLocation.ToString());
+		           TEXT("Channel '%s' of type '%s' does not exist at location %s"),
+		           *InChannelName.ToString(), *InExpectedStruct->GetName(), *InLocation.ToString());
 		return FInstancedStruct();
 	}
 
@@ -126,8 +159,8 @@ FInstancedStruct UChunkManager_DynamicData::GetChannelDataByGridPoint(const FNam
 	if (!InstancedPtr)
 	{
 		SCHUNK_LOG(LogSChunkManager_DynamicData, Log,
-				 TEXT("Channel '%s' of type '%s' does not exist at Point %s"),
-				 *InChannelName.ToString(), *InExpectedStruct->GetName(), *InGridPoint.ToString());
+		           TEXT("Channel '%s' of type '%s' does not exist at Point %s"),
+		           *InChannelName.ToString(), *InExpectedStruct->GetName(), *InGridPoint.ToString());
 		return FInstancedStruct();
 	}
 
@@ -368,6 +401,72 @@ bool UChunkManager_DynamicData::HasChannelByGridPoints(const FName InChannelName
 	return ChunkSystem_DynamicData->HasChannels(InChannelName, InGridPoint, InExpectedStruct);
 }
 
+bool UChunkManager_DynamicData::IsEmpty() const
+{
+	if (!ChunkSystem_DynamicData)
+	{
+		SCHUNK_LOG(LogSChunkManager_DynamicData, Warning, TEXT("Chunk system not initialized."));
+		return false;
+	}
+
+	return ChunkSystem_DynamicData->IsEmpty();
+}
+
+void UChunkManager_DynamicData::Empty(const int32 InExpectedNumElements)
+{
+	if (!ChunkSystem_DynamicData)
+	{
+		SCHUNK_LOG(LogSChunkManager_DynamicData, Warning, TEXT("Chunk system not initialized."));
+		return;
+	}
+
+	ChunkSystem_DynamicData->Empty(InExpectedNumElements);
+}
+
+void UChunkManager_DynamicData::Reserve(const int32 InAmount)
+{
+	if (!ChunkSystem_DynamicData)
+	{
+		SCHUNK_LOG(LogSChunkManager_DynamicData, Warning, TEXT("Chunk system not initialized."));
+		return;
+	}
+
+	ChunkSystem_DynamicData->Reserve(InAmount);
+}
+
+void UChunkManager_DynamicData::Shrink()
+{
+	if (!ChunkSystem_DynamicData)
+	{
+		SCHUNK_LOG(LogSChunkManager_DynamicData, Warning, TEXT("Chunk system not initialized."));
+		return;
+	}
+
+	ChunkSystem_DynamicData->Shrink();
+}
+
+int32 UChunkManager_DynamicData::Num() const
+{
+	if (!ChunkSystem_DynamicData)
+	{
+		SCHUNK_LOG(LogSChunkManager_DynamicData, Warning, TEXT("Chunk system not initialized."));
+		return INDEX_NONE;
+	}
+
+	return ChunkSystem_DynamicData->Num();
+}
+
+void UChunkManager_DynamicData::DrawDebug(const TFunction<FVector(const FIntPoint&)>& InConvertor) const
+{
+	if (!ChunkSystem_DynamicData.IsValid())
+	{
+		SCHUNK_LOG(LogSChunkManager_DynamicData, Warning, TEXT("ChunkSystem_DynamicData is not valid"));
+		return;
+	}
+
+	ChunkSystem_DynamicData->DrawDebug(InConvertor);
+}
+
 void UChunkManager_DynamicData::CreateChunkSystem()
 {
 	if (ChunkSystem_DynamicData.IsValid())
@@ -375,7 +474,7 @@ void UChunkManager_DynamicData::CreateChunkSystem()
 		ChunkSystem_DynamicData.Reset();
 	}
 
-	ChunkSystem_DynamicData = MakeUnique<FChunkSystem_DynamicData<>>(StoredParams.WorldContext, StoredParams.ChunkSize);
+	ChunkSystem_DynamicData = MakeShared<TChunkSystem_DynamicData<>>(StoredParams.WorldContext, StoredParams.ChunkSize);
 }
 
 void UChunkManager_DynamicData::OnInitialized()

@@ -18,11 +18,11 @@ struct FChunkInitParameters
 	GENERATED_BODY()
 
 	/** World context object that owns the chunk system. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UObject* WorldContext = nullptr;
+	UPROPERTY(SaveGame, EditAnywhere, BlueprintReadWrite)
+	TObjectPtr<UObject> WorldContext = nullptr;
 
 	/** Size of a single chunk in grid cells. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(SaveGame, EditAnywhere, BlueprintReadWrite)
 	int32 ChunkSize = 15;
 };
 
@@ -44,11 +44,14 @@ public:
 
 	/** Retrieve parameters used during initialization. */
 	UFUNCTION(BlueprintCallable, Category = "Chunk System")
-	const FChunkInitParameters& GetParameters() const { return StoredParams; }
+	const FChunkInitParameters& GetInitialParameters() const
+	{
+		return StoredParams;
+	}
 
 protected:
-	virtual void CreateChunkSystem() PURE_VIRTUAL(UChunkSystem::CreateChunkSystem(), );
-	virtual void OnInitialized() PURE_VIRTUAL(&ThisClass::OnInitialized, );
+	virtual void CreateChunkSystem() PURE_VIRTUAL(UChunkSystem::CreateChunkSystem(),);
+	virtual void OnInitialized() PURE_VIRTUAL(&ThisClass::OnInitialized,);
 
 	/** Cached initialization parameters. */
 	UPROPERTY(SaveGame, BlueprintReadOnly, Category = "Chunk System")

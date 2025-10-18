@@ -33,13 +33,11 @@ struct SIMPLECHUNKSYSTEM_API FCellBaseInfo
 
 	virtual ~FCellBaseInfo() = default;
 
-	virtual bool Serialize(FArchive& Ar)
-	{
-		return true;
-	}
+	virtual bool Serialize(FArchive& Ar);
+	virtual void DrawDebug(const UWorld* World, const FVector& CellCenter) const;
 };
 
-template<>
+template <>
 struct TStructOpsTypeTraits<FCellBaseInfo> : public TStructOpsTypeTraitsBase2<FCellBaseInfo>
 {
 	enum
@@ -57,6 +55,8 @@ public:
 	template <typename TStruct>
 	FORCEINLINE FInstancedStruct& GetOrAddChannel(const FName Name)
 	{
+		TRACE_CPUPROFILER_EVENT_SCOPE(FCellDynamicInfo::Template_GetOrAddChannel)
+
 		const FCellChannelKey Key{Name, TStruct::StaticStruct()};
 		TOptional<FInstancedStruct>& OptStruct = Channels.FindOrAdd(Key);
 		if (!OptStruct.IsSet())
@@ -65,9 +65,6 @@ public:
 			NewStruct.InitializeAs(TStruct::StaticStruct());
 
 			OptStruct = NewStruct;
-
-			SCHUNK_LOG(LogSChunkLocal, Log, TEXT("Added channel '%s' of type '%s'"),
-			           *Name.ToString(), *Key.Type->GetName());
 		}
 
 		return *OptStruct;
@@ -75,6 +72,8 @@ public:
 
 	FORCEINLINE FInstancedStruct& GetOrAddChannel(const FName Name, UScriptStruct* Type)
 	{
+		TRACE_CPUPROFILER_EVENT_SCOPE(FCellDynamicInfo::GetOrAddChannel)
+
 		const FCellChannelKey Key{Name, Type};
 		TOptional<FInstancedStruct>& OptStruct = Channels.FindOrAdd(Key);
 		if (!OptStruct.IsSet())
@@ -83,9 +82,6 @@ public:
 			NewStruct.InitializeAs(Type);
 
 			OptStruct = NewStruct;
-
-			SCHUNK_LOG(LogSChunkLocal, Log, TEXT("Added channel '%s' of type '%s'"),
-			           *Name.ToString(), *Key.Type->GetName());
 		}
 
 		return *OptStruct;
@@ -94,14 +90,13 @@ public:
 	template <typename TStruct>
 	FORCEINLINE bool RemoveChannel(const FName Name)
 	{
+		TRACE_CPUPROFILER_EVENT_SCOPE(FCellDynamicInfo::Template_RemoveChannel)
+
 		const FCellChannelKey Key{Name, TStruct::StaticStruct()};
 		if (!Channels.Contains(Key))
 		{
 			return false;
 		}
-
-		SCHUNK_LOG(LogSChunkLocal, Log, TEXT("Removed channel '%s' of type '%s'"),
-		           *Name.ToString(), *Key.Type->GetName());
 
 		Channels.Remove(Key);
 		return true;
@@ -109,14 +104,13 @@ public:
 
 	FORCEINLINE bool RemoveChannel(const FName Name, UScriptStruct* Type)
 	{
+		TRACE_CPUPROFILER_EVENT_SCOPE(FCellDynamicInfo::RemoveChannel)
+
 		const FCellChannelKey Key{Name, Type};
 		if (!Channels.Contains(Key))
 		{
 			return false;
 		}
-
-		SCHUNK_LOG(LogSChunkLocal, Log, TEXT("Removed channel '%s' of type '%s'"),
-		           *Name.ToString(), *Key.Type->GetName());
 
 		Channels.Remove(Key);
 		return true;
@@ -125,15 +119,21 @@ public:
 	template <typename TStruct>
 	FORCEINLINE bool HasChannel(const FName Name) const
 	{
+		TRACE_CPUPROFILER_EVENT_SCOPE(FCellDynamicInfo::Template_HasChannel)
+
 		const FCellChannelKey Key{Name, TStruct::StaticStruct()};
 		return Channels.Contains(Key);
 	}
 
 	FORCEINLINE bool HasChannel(const FName Name, UScriptStruct* Type) const
 	{
+		TRACE_CPUPROFILER_EVENT_SCOPE(FCellDynamicInfo::HasChannel)
+
 		const FCellChannelKey Key{Name, Type};
 		return Channels.Contains(Key);
 	}
+
+	void DrawDebug(const UWorld* World, const FVector& CellCenter) const;
 
 private:
 	TMap<FCellChannelKey, TOptional<FInstancedStruct>> Channels;
@@ -159,35 +159,49 @@ public:
 	template <typename TStruct>
 	FORCEINLINE FInstancedStruct& FindOrAddChannel(const FName Name, const FIntPoint& InCellPoint)
 	{
+		TRACE_CPUPROFILER_EVENT_SCOPE(FChunk_DynamicData::Template_FindOrAddChannel)
+
 		return Cells[InCellPoint].GetOrAddChannel<TStruct>(Name);
 	}
 
 	FORCEINLINE FInstancedStruct& FindOrAddChannel(const FName Name, const FIntPoint& InCellPoint, UScriptStruct* Type)
 	{
+		TRACE_CPUPROFILER_EVENT_SCOPE(FChunk_DynamicData::FindOrAddChannel)
+
 		return Cells[InCellPoint].GetOrAddChannel(Name, Type);
 	}
 
 	template <typename TStruct>
 	FORCEINLINE bool TryRemoveChannel(const FName Name, const FIntPoint& InCellPoint)
 	{
+		TRACE_CPUPROFILER_EVENT_SCOPE(FChunk_DynamicData::Template_TryRemoveChannel)
+
 		return Cells[InCellPoint].RemoveChannel<TStruct>(Name);
 	}
 
 	FORCEINLINE bool TryRemoveChannel(const FName Name, const FIntPoint& InCellPoint, UScriptStruct* Type)
 	{
+		TRACE_CPUPROFILER_EVENT_SCOPE(FChunk_DynamicData::TryRemoveChannel)
+
 		return Cells[InCellPoint].RemoveChannel(Name, Type);
 	}
 
 	template <typename TStruct>
 	FORCEINLINE bool HasChannel(const FName Name, const FIntPoint& InCellPoint) const
 	{
+		TRACE_CPUPROFILER_EVENT_SCOPE(FChunk_DynamicData::Template_HasChannel)
+
 		return Cells[InCellPoint].HasChannel<TStruct>(Name);
 	}
 
 	FORCEINLINE bool HasChannel(const FName Name, const FIntPoint& InCellPoint, UScriptStruct* Type) const
 	{
+		TRACE_CPUPROFILER_EVENT_SCOPE(FChunk_DynamicData::HasChannel)
+
 		return Cells[InCellPoint].HasChannel(Name, Type);
 	}
+
+	virtual void DrawDebug(const UWorld* World, const TFunction<FVector(const FIntPoint&)>& Convertor) const override;
 
 private:
 	TMap<FIntPoint, FCellDynamicInfo> Cells;

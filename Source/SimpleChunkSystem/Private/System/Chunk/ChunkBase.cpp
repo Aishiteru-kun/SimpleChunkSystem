@@ -19,3 +19,17 @@ void FChunkBase::Serialize(FArchive& Ar)
 	Ar << TopLeft;
 	Ar << BottomRight;
 }
+
+void FChunkBase::DrawDebug(const UWorld* World, const TFunction<FVector(const FIntPoint&)>& Convertor) const
+{
+	const FVector WorldLocationTopLeft = Convertor(TopLeft);
+	const FVector WorldLocationBottomRight = Convertor(BottomRight);
+
+	const FBox ChunkBox{
+		WorldLocationTopLeft,
+		WorldLocationBottomRight
+	};
+
+	DrawDebugBox(World, ChunkBox.GetCenter(), ChunkBox.GetExtent() + FVector(0.0f, 0.0f, 500.0f), FColor::Purple, false,
+	             0.0f, 0, 10.0f);
+}
