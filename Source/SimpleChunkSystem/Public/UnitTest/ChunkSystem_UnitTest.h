@@ -64,6 +64,81 @@ FORCEINLINE bool FChunk_DivFloorTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FChunk_DynamicData_CustomBoundsTest,
+                                 "SimpleChunkSystem.Chunk.DynamicData.CustomBounds",
+                                 EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+FORCEINLINE bool FChunk_DynamicData_CustomBoundsTest::RunTest(const FString& Parameters)
+{
+	const auto ValidateChunk = [this](const FIntPoint& TopLeft, const FIntPoint& BottomRight)
+	{
+		const int32 Width = BottomRight.X - TopLeft.X + 1;
+		const int32 Height = BottomRight.Y - TopLeft.Y + 1;
+		const int32 ExpectedTotal = FMath::Max(Width, 0) * FMath::Max(Height, 0);
+
+		bool bResult = true;
+
+		bResult &= TestTrue(TEXT("Chunk bounds produce non-negative area"), ExpectedTotal >= 0);
+
+		FChunk_DynamicData Chunk(TopLeft, BottomRight);
+
+		const FName ChannelName = ChunkSubsystemUnitTest::MakeUniqueKey(TEXT("CustomBounds_Channel"));
+
+		TMap<FIntPoint, int32> ExpectedValues;
+		int32 Counter = 0;
+
+		for (int32 X = TopLeft.X; X <= BottomRight.X; ++X)
+		{
+			for (int32 Y = TopLeft.Y; Y <= BottomRight.Y; ++Y)
+			{
+				const FIntPoint Cell(X, Y);
+				FInstancedStruct& Struct = Chunk.FindOrAddChannel<FData_UnitTest>(ChannelName, Cell);
+				FData_UnitTest* Data = Struct.GetMutablePtr<FData_UnitTest>();
+				bResult &= TestNotNull(TEXT("Mutable data pointer is valid"), Data);
+				if (Data)
+				{
+					Data->Value = Counter;
+				}
+
+				ExpectedValues.Add(Cell, Counter);
+				++Counter;
+			}
+		}
+
+		bResult &= TestEqual(TEXT("Visited cells match expected total"), Counter, ExpectedTotal);
+		bResult &= TestEqual(
+			TEXT("ExpectedValues entries match total cell count"), ExpectedValues.Num(), ExpectedTotal);
+
+		int32 ObservedCount = 0;
+		TSet<FIntPoint> SeenCells;
+
+		for (const auto Entry : Chunk.IterateChannel<FData_UnitTest>(ChannelName))
+		{
+			++ObservedCount;
+			SeenCells.Add(Entry.Key);
+
+			const int32* ExpectedValue = ExpectedValues.Find(Entry.Key);
+			bResult &= TestNotNull(TEXT("Expected value exists for iterated cell"), ExpectedValue);
+			if (ExpectedValue)
+			{
+				bResult &= TestEqual(TEXT("Observed value matches expected"), Entry.Value.Value, *ExpectedValue);
+			}
+		}
+
+		bResult &= TestEqual(TEXT("Iterator visited all cells"), ObservedCount, ExpectedTotal);
+		bResult &= TestEqual(TEXT("Unique cells visited matches expected"), SeenCells.Num(), ExpectedTotal);
+		bResult &= TestTrue(TEXT("Top-left cell included in iteration"), SeenCells.Contains(TopLeft));
+		bResult &= TestTrue(TEXT("Bottom-right cell included in iteration"), SeenCells.Contains(BottomRight));
+
+		return bResult;
+	};
+
+	const bool bWideChunkValid = ValidateChunk(FIntPoint(5, 10), FIntPoint(7, 15));
+	const bool bTallChunkValid = ValidateChunk(FIntPoint(12, 20), FIntPoint(12, 22));
+
+	return bWideChunkValid && bTallChunkValid;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FChunk_ChunkSystem_DynamicDataTest,
                                  "SimpleChunkSystem.System.DynamicDataTest",
                                  EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
@@ -1119,7 +1194,7 @@ FORCEINLINE bool FChunk_ChunkManager_DynamicDataTest::RunTest(const FString& Par
 
 	const FName LocationChannelName = TEXT("UnitTest_LocationChannel");
 	const FVector TestLocation(1024.f, 2048.f, 512.f);
-	const int32 LocationValue = 1337;
+	constexpr int32 LocationValue = 1337;
 
 	FInstancedStruct LocationStruct;
 	LocationStruct.InitializeAs(FData_UnitTest::StaticStruct());
@@ -1168,7 +1243,7 @@ FORCEINLINE bool FChunk_ChunkManager_DynamicDataTest::RunTest(const FString& Par
 
 	const FName GridChannelName = TEXT("UnitTest_GridChannel");
 	const FIntPoint TestGridPoint(5, 9);
-	const int32 GridValue = 2718;
+	constexpr int32 GridValue = 2718;
 
 	FInstancedStruct GridStruct;
 	GridStruct.InitializeAs(FData_UnitTest::StaticStruct());

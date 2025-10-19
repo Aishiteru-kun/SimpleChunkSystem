@@ -763,7 +763,7 @@ private:
 
 		FIterator end() const
 		{
-			return FIterator(Owner, &Key, &Locations, MAX_int32);
+			return FIterator(Owner, &Key, &Locations, TNumericLimits<int32>::Max());
 		}
 
 		bool IsEmpty() const

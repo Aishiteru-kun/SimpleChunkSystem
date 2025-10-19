@@ -173,8 +173,13 @@ FChunk_DynamicData::FChunk_DynamicData(const FIntPoint& InTopLeft, const FIntPoi
 	const FIntPoint& TL = GetTopLeft();
 	const FIntPoint& BR = GetBottomRight();
 
-	const int32 ChunkSize = FChunkInitParameters().ChunkSize;
-	Cells.Reserve(ChunkSize * ChunkSize);
+	const int32 Width = BR.X - TL.X + 1;
+	const int32 Height = BR.Y - TL.Y + 1;
+
+	check(Width > 0);
+	check(Height > 0);
+
+	Cells.Reserve(FMath::Max(Width, 0) * FMath::Max(Height, 0));
 
 	for (int32 X = TL.X; X <= BR.X; ++X)
 	{
