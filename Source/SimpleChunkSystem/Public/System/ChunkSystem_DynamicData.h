@@ -66,17 +66,13 @@ public:
 		TRACE_CPUPROFILER_EVENT_SCOPE(TChunkSystem_DynamicData::Template_GetChannel)
 
 		const FIntPoint ChunkPoint = this->ConvertGlobalToChunkGrid(InGridPoint);
-		if (!this->Chunks.Contains(ChunkPoint))
+		TSharedPtr<FChunk_DynamicData> const* ChunkPtr = this->Chunks.Find(ChunkPoint);
+		if (!ChunkPtr || !ChunkPtr->IsValid())
 		{
 			return nullptr;
 		}
 
-		if (!HasChannel<TStruct>(Name, InGridPoint))
-		{
-			return nullptr;
-		}
-
-		return &this->Chunks[ChunkPoint]->template FindOrAddChannel<TStruct>(Name, InGridPoint);
+		return (*ChunkPtr)->FindChannel<TStruct>(Name, InGridPoint);
 	}
 
 	FORCEINLINE FInstancedStruct* GetChannel(const FName Name, const FVector& InLocation, UScriptStruct* Type)
@@ -92,17 +88,13 @@ public:
 		TRACE_CPUPROFILER_EVENT_SCOPE(TChunkSystem_DynamicData::GetChannel)
 
 		const FIntPoint ChunkPoint = this->ConvertGlobalToChunkGrid(InGridPoint);
-		if (!this->Chunks.Contains(ChunkPoint))
+		TSharedPtr<FChunk_DynamicData> const* ChunkPtr = this->Chunks.Find(ChunkPoint);
+		if (!ChunkPtr || !ChunkPtr->IsValid())
 		{
 			return nullptr;
 		}
 
-		if (!HasChannel(Name, InGridPoint, Type))
-		{
-			return nullptr;
-		}
-
-		return &this->Chunks[ChunkPoint]->FindOrAddChannel(Name, InGridPoint, Type);
+		return (*ChunkPtr)->FindChannel(Name, InGridPoint, Type);
 	}
 
 	template <typename TStruct>

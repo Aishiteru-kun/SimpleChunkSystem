@@ -4,10 +4,21 @@
 #if WITH_AUTOMATION_TESTS
 
 #include "CoreMinimal.h"
-#include "ChunkSystemTypes_UnitTest.h"
 #include "Misc/AutomationTest.h"
-#include "Serialization/ObjectAndNameAsStringProxyArchive.h"
+#include "ChunkSystemTypes_UnitTest.h"
+#include "Manager/ChunkManager_DynamicData.h"
+#include "Subsystem/ChunkSubsystem.h"
+#include "Subsystem/ChunkSubsystemEvents.h"
 #include "System/ChunkSystem_DynamicData.h"
+
+namespace ChunkSubsystemUnitTest
+{
+	static FName MakeUniqueKey(const FString& Suffix)
+	{
+		return FName(*FString::Printf(
+			TEXT("ChunkSubsystemUnitTest_%s_%s"), *Suffix, *FGuid::NewGuid().ToString(EGuidFormats::Digits)));
+	}
+}
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FChunk_DivFloorTest,
                                  "SimpleChunkSystem.Math.DivFloor",
@@ -85,7 +96,7 @@ FORCEINLINE bool FChunk_ChunkSystem_DynamicDataTest::RunTest(const FString& Para
 
 	const FVector TestChannel_Location = FVector(1000, 2000, 3000);
 	const FName TestChannel_ChannelName = TEXT("TestChannel");
-	const int32 TestChannel_Value = 42;
+	constexpr int32 TestChannel_Value = 42;
 
 	{
 		ChunkSystem->FindOrAddChannel<FData_UnitTest>(TestChannel_ChannelName, TestChannel_Location).GetMutablePtr<
@@ -94,8 +105,8 @@ FORCEINLINE bool FChunk_ChunkSystem_DynamicDataTest::RunTest(const FString& Para
 
 	const FVector TestChannel2_Location = FVector(2000, 3000, 4000);
 	const FName TestChannel2_ChannelName = TEXT("TestChannel2");
-	const int32 TestChannel2_Value = 84;
-	const int32 TestChannel2_Value2 = 168;
+	constexpr int32 TestChannel2_Value = 84;
+	constexpr int32 TestChannel2_Value2 = 168;
 
 	{
 		FInstancedStruct& Data_2 = ChunkSystem->FindOrAddChannel<FData2_UnitTest>(TestChannel2_ChannelName,
@@ -247,7 +258,7 @@ FORCEINLINE bool FChunk_ChunkSystem_DynamicDataTest::RunTest(const FString& Para
 	{
 		const FVector AdditionalLocation(1234.f, 5678.f, 0.f);
 		const FVector MissingLocation(4321.f, 8765.f, 0.f);
-		const int32 AdditionalValue = 777;
+		constexpr int32 AdditionalValue = 777;
 
 		{
 			FInstancedStruct& AdditionalData = ChunkSystem->FindOrAddChannel<FData_UnitTest>(
@@ -576,7 +587,7 @@ FORCEINLINE bool FChunk_ChunkSystem_Serialize::RunTest(const FString& Parameters
 
 	const FVector TestChannel_Location = FVector(1000, 2000, 3000);
 	const FName TestChannel_ChannelName = TEXT("TestChannel");
-	const int32 TestChannel_Value = 42;
+	constexpr int32 TestChannel_Value = 42;
 
 	{
 		ChunkSystem->FindOrAddChannel<FData_UnitTest>(TestChannel_ChannelName, TestChannel_Location).GetMutablePtr<
@@ -585,8 +596,8 @@ FORCEINLINE bool FChunk_ChunkSystem_Serialize::RunTest(const FString& Parameters
 
 	const FVector TestChannel2_Location = FVector(2000, 3000, 4000);
 	const FName TestChannel2_ChannelName = TEXT("TestChannel2");
-	const int32 TestChannel2_Value = 84;
-	const int32 TestChannel2_Value2 = 168;
+	constexpr int32 TestChannel2_Value = 84;
+	constexpr int32 TestChannel2_Value2 = 168;
 
 	{
 		FInstancedStruct& Data_2 = ChunkSystem->FindOrAddChannel<FData2_UnitTest>(TestChannel2_ChannelName,
@@ -932,9 +943,9 @@ FORCEINLINE bool FChunk_ChunkSystem_BulkOpsTest::RunTest(const FString& Paramete
 		TestEqual(TEXT("Bulk FindOrAddChannels created expected number of entries"),
 		          Created.Num(), GridLocations.Num());
 
-		int32 Seed = 500;
 		for (int32 Index = 0; Index < Created.Num(); ++Index)
 		{
+			constexpr int32 Seed = 500;
 			FData2_UnitTest* Ptr = Created[Index]->GetMutablePtr<FData2_UnitTest>();
 			Ptr->Value = Seed + Index;
 			Ptr->Value2 = (Seed + Index) * 2;
@@ -944,14 +955,14 @@ FORCEINLINE bool FChunk_ChunkSystem_BulkOpsTest::RunTest(const FString& Paramete
 	TestTrue(TEXT("HasChannels for all grid locations"),
 	         ChunkSystem->HasChannels<FData2_UnitTest>(ChannelName, GridLocations));
 
-	for (const FIntPoint& P : GridLocations)
+	for (const FIntPoint& Point : GridLocations)
 	{
-		FInstancedStruct* S = ChunkSystem->GetChannel<FData2_UnitTest>(ChannelName, P);
-		TestNotNull(TEXT("Channel exists and can be retrieved"), S);
-		if (S)
+		FInstancedStruct* Struct = ChunkSystem->GetChannel<FData2_UnitTest>(ChannelName, Point);
+		TestNotNull(TEXT("Channel exists and can be retrieved"), Struct);
+		if (Struct)
 		{
-			const FData2_UnitTest* D = S->GetPtr<FData2_UnitTest>();
-			TestTrue(TEXT("Stored values are non-default"), D->Value != 0 && D->Value2 != 0);
+			const FData2_UnitTest* Data = Struct->GetPtr<FData2_UnitTest>();
+			TestTrue(TEXT("Stored values are non-default"), Data->Value != 0 && Data->Value2 != 0);
 		}
 	}
 
@@ -1011,12 +1022,12 @@ FORCEINLINE bool FChunk_ChunkSystem_ChannelIndexRebuildTest::RunTest(const FStri
 	const FString NameValue = TEXT("Hello");
 	const FName Name2Value = TEXT("World");
 
-	for (const FIntPoint& P : Points)
+	for (const FIntPoint& Point : Points)
 	{
-		FInstancedStruct& S = ChunkSystem->FindOrAddChannel<FData3_UnitTest>(ChannelName, P);
-		FData3_UnitTest* D = S.GetMutablePtr<FData3_UnitTest>();
-		D->Name = NameValue;
-		D->Name2 = Name2Value;
+		FInstancedStruct& Struct = ChunkSystem->FindOrAddChannel<FData3_UnitTest>(ChannelName, Point);
+		FData3_UnitTest* Data = Struct.GetMutablePtr<FData3_UnitTest>();
+		Data->Name = NameValue;
+		Data->Name2 = Name2Value;
 	}
 
 	TArray<uint8> Serialized;
@@ -1042,9 +1053,9 @@ FORCEINLINE bool FChunk_ChunkSystem_ChannelIndexRebuildTest::RunTest(const FStri
 		for (const auto Entry : Range)
 		{
 			++Count;
-			const FData3_UnitTest& D = Entry.Value;
-			TestEqual(TEXT("Name restored"), D.Name, NameValue);
-			TestEqual(TEXT("Name2 restored"), D.Name2, Name2Value);
+			const FData3_UnitTest& Data = Entry.Value;
+			TestEqual(TEXT("Name restored"), Data.Name, NameValue);
+			TestEqual(TEXT("Name2 restored"), Data.Name2, Name2Value);
 		}
 		TestEqual(TEXT("All points are visible via system iterator after reload"), Count, Points.Num());
 	}
@@ -1064,6 +1075,521 @@ FORCEINLINE bool FChunk_ChunkSystem_ChannelIndexRebuildTest::RunTest(const FStri
 	}
 
 	delete ChunkSystem;
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FChunk_ChunkManager_DynamicDataTest,
+                                 "SimpleChunkSystem.Manager.DynamicData",
+                                 EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+FORCEINLINE bool FChunk_ChunkManager_DynamicDataTest::RunTest(const FString& Parameters)
+{
+	TestNotNull(TEXT("GEngine is valid"), GEngine);
+	if (!GEngine)
+	{
+		return false;
+	}
+
+	const TIndirectArray<FWorldContext>& Contexts = GEngine->GetWorldContexts();
+	TestTrue(TEXT("World contexts are available"), !Contexts.IsEmpty());
+	if (Contexts.IsEmpty())
+	{
+		return false;
+	}
+
+	UWorld* World = Contexts[0].World();
+	TestNotNull(TEXT("World is valid"), World);
+	if (!World)
+	{
+		return false;
+	}
+
+	UChunkManager_DynamicData* PrimaryManager = NewObject<UChunkManager_DynamicData>();
+	TestNotNull(TEXT("Primary manager created"), PrimaryManager);
+	if (!PrimaryManager)
+	{
+		return false;
+	}
+
+	FChunkInitParameters InitParameters;
+	InitParameters.WorldContext = World;
+	InitParameters.ChunkSize = 16;
+
+	PrimaryManager->Initialize(InitParameters);
+
+	const FName LocationChannelName = TEXT("UnitTest_LocationChannel");
+	const FVector TestLocation(1024.f, 2048.f, 512.f);
+	const int32 LocationValue = 1337;
+
+	FInstancedStruct LocationStruct;
+	LocationStruct.InitializeAs(FData_UnitTest::StaticStruct());
+	LocationStruct.GetMutablePtr<FData_UnitTest>()->Value = LocationValue;
+
+	PrimaryManager->SetChannelDataByLocation(LocationChannelName, TestLocation, LocationStruct);
+	TestTrue(TEXT("Channel stored by location"),
+	         PrimaryManager->HasChannelByLocation(LocationChannelName, TestLocation, FData_UnitTest::StaticStruct()));
+
+	bool bLocationFound = false;
+	FInstancedStruct RetrievedLocation = PrimaryManager->GetChannelDataByLocation(
+		LocationChannelName, TestLocation, FData_UnitTest::StaticStruct(), bLocationFound);
+	TestTrue(TEXT("GetChannelDataByLocation found entry"), bLocationFound);
+	TestTrue(TEXT("GetChannelDataByLocation returned valid struct"), RetrievedLocation.IsValid());
+	if (const FData_UnitTest* RetrievedLocationPtr = RetrievedLocation.GetPtr<FData_UnitTest>())
+	{
+		TestEqual(TEXT("Retrieved location value matches stored value"), RetrievedLocationPtr->Value, LocationValue);
+	}
+	else
+	{
+		AddError(TEXT("Retrieved location data pointer is null"));
+	}
+
+	if (FData_UnitTest* RetrievedLocationMutablePtr = RetrievedLocation.GetMutablePtr<FData_UnitTest>())
+	{
+		RetrievedLocationMutablePtr->Value = LocationValue + 1;
+	}
+	else
+	{
+		AddError(TEXT("Mutable pointer for retrieved location data is null"));
+	}
+
+	bool bLocationFoundAgain = false;
+	const FInstancedStruct RetrievedLocationAgain = PrimaryManager->GetChannelDataByLocation(
+		LocationChannelName, TestLocation, FData_UnitTest::StaticStruct(), bLocationFoundAgain);
+	TestTrue(TEXT("GetChannelDataByLocation returns copy"), bLocationFoundAgain);
+	if (const FData_UnitTest* RetrievedLocationAgainPtr = RetrievedLocationAgain.GetPtr<FData_UnitTest>())
+	{
+		TestEqual(TEXT("Stored location value unchanged after modifying copy"), RetrievedLocationAgainPtr->Value,
+		          LocationValue);
+	}
+	else
+	{
+		AddError(TEXT("Retrieved location data pointer (second read) is null"));
+	}
+
+	const FName GridChannelName = TEXT("UnitTest_GridChannel");
+	const FIntPoint TestGridPoint(5, 9);
+	const int32 GridValue = 2718;
+
+	FInstancedStruct GridStruct;
+	GridStruct.InitializeAs(FData_UnitTest::StaticStruct());
+	GridStruct.GetMutablePtr<FData_UnitTest>()->Value = GridValue;
+
+	PrimaryManager->SetChannelDataByGridPoint(GridChannelName, TestGridPoint, GridStruct);
+	TestTrue(TEXT("Channel stored by grid point"),
+	         PrimaryManager->HasChannelByGridPoint(GridChannelName, TestGridPoint, FData_UnitTest::StaticStruct()));
+
+	bool bGridFound = false;
+	FInstancedStruct RetrievedGrid = PrimaryManager->GetChannelDataByGridPoint(
+		GridChannelName, TestGridPoint, FData_UnitTest::StaticStruct(), bGridFound);
+	TestTrue(TEXT("GetChannelDataByGridPoint found entry"), bGridFound);
+	TestTrue(TEXT("GetChannelDataByGridPoint returned valid struct"), RetrievedGrid.IsValid());
+	if (const FData_UnitTest* RetrievedGridPtr = RetrievedGrid.GetPtr<FData_UnitTest>())
+	{
+		TestEqual(TEXT("Retrieved grid value matches stored value"), RetrievedGridPtr->Value, GridValue);
+	}
+	else
+	{
+		AddError(TEXT("Retrieved grid data pointer is null"));
+	}
+
+	if (FData_UnitTest* RetrievedGridMutablePtr = RetrievedGrid.GetMutablePtr<FData_UnitTest>())
+	{
+		RetrievedGridMutablePtr->Value = GridValue + 1;
+	}
+	else
+	{
+		AddError(TEXT("Mutable pointer for retrieved grid data is null"));
+	}
+
+	bool bGridFoundAgain = false;
+	const FInstancedStruct RetrievedGridAgain = PrimaryManager->GetChannelDataByGridPoint(
+		GridChannelName, TestGridPoint, FData_UnitTest::StaticStruct(), bGridFoundAgain);
+	TestTrue(TEXT("GetChannelDataByGridPoint returns copy"), bGridFoundAgain);
+	if (const FData_UnitTest* RetrievedGridAgainPtr = RetrievedGridAgain.GetPtr<FData_UnitTest>())
+	{
+		TestEqual(TEXT("Stored grid value unchanged after modifying copy"), RetrievedGridAgainPtr->Value, GridValue);
+	}
+	else
+	{
+		AddError(TEXT("Retrieved grid data pointer (second read) is null"));
+	}
+
+	FInstancedStruct InvalidStruct;
+	InvalidStruct.InitializeAs(FData_Invalid_ChunkManagerUnitTest::StaticStruct());
+	const FName InvalidChannelName = TEXT("UnitTest_InvalidChannel");
+	const FVector InvalidLocation(1.f, 2.f, 3.f);
+	const FIntPoint InvalidGridPoint(7, 11);
+
+	PrimaryManager->SetChannelDataByLocation(InvalidChannelName, InvalidLocation, InvalidStruct);
+	TestFalse(TEXT("Invalid struct does not create location channel"),
+	          PrimaryManager->HasChannelByLocation(InvalidChannelName, InvalidLocation,
+	                                               FData_UnitTest::StaticStruct()));
+
+	PrimaryManager->SetChannelDataByGridPoint(InvalidChannelName, InvalidGridPoint, InvalidStruct);
+	TestFalse(TEXT("Invalid struct does not create grid channel"),
+	          PrimaryManager->HasChannelByGridPoint(InvalidChannelName, InvalidGridPoint,
+	                                                FData_UnitTest::StaticStruct()));
+
+	bool bWrongLocationFound = true;
+	const FInstancedStruct WrongLocationData = PrimaryManager->GetChannelDataByLocation(
+		LocationChannelName, TestLocation, FData_Invalid_ChunkManagerUnitTest::StaticStruct(), bWrongLocationFound);
+	TestFalse(TEXT("GetChannelDataByLocation with invalid expected type fails"), bWrongLocationFound);
+	TestFalse(TEXT("GetChannelDataByLocation with invalid expected type returns invalid struct"),
+	          WrongLocationData.IsValid());
+
+	bool bWrongGridFound = true;
+	const FInstancedStruct WrongGridData = PrimaryManager->GetChannelDataByGridPoint(
+		GridChannelName, TestGridPoint, FData_Invalid_ChunkManagerUnitTest::StaticStruct(), bWrongGridFound);
+	TestFalse(TEXT("GetChannelDataByGridPoint with invalid expected type fails"), bWrongGridFound);
+	TestFalse(TEXT("GetChannelDataByGridPoint with invalid expected type returns invalid struct"),
+	          WrongGridData.IsValid());
+
+	TestFalse(TEXT("TryRemoveChannelByLocation with invalid type fails"),
+	          PrimaryManager->TryRemoveChannelByLocation(LocationChannelName, TestLocation,
+	                                                     FData_Invalid_ChunkManagerUnitTest::StaticStruct()));
+
+	TestFalse(TEXT("TryRemoveChannelByGridPoint with invalid type fails"),
+	          PrimaryManager->TryRemoveChannelByGridPoint(GridChannelName, TestGridPoint,
+	                                                      FData_Invalid_ChunkManagerUnitTest::StaticStruct()));
+
+	TSet<FVector> EmptyLocationSet;
+	TestFalse(TEXT("TryRemoveChannelByLocations with empty set fails"),
+	          PrimaryManager->TryRemoveChannelByLocations(LocationChannelName, EmptyLocationSet,
+	                                                      FData_UnitTest::StaticStruct()));
+
+	TSet<FIntPoint> EmptyGridSet;
+	TestFalse(TEXT("TryRemoveChannelByGridPoints with empty set fails"),
+	          PrimaryManager->TryRemoveChannelByGridPoints(GridChannelName, EmptyGridSet,
+	                                                       FData_UnitTest::StaticStruct()));
+
+	UChunkManager_DynamicData* SharedManager = NewObject<UChunkManager_DynamicData>();
+	TestNotNull(TEXT("Shared manager created"), SharedManager);
+	if (!SharedManager)
+	{
+		return false;
+	}
+
+	SharedManager->Initialize(InitParameters);
+	SharedManager->InitializeWithSharedContext(PrimaryManager);
+
+	bool bSharedLocationFound = false;
+	const FInstancedStruct SharedLocation = SharedManager->GetChannelDataByLocation(
+		LocationChannelName, TestLocation, FData_UnitTest::StaticStruct(), bSharedLocationFound);
+	TestTrue(TEXT("Shared manager can access location channel"), bSharedLocationFound);
+	if (const FData_UnitTest* SharedLocationPtr = SharedLocation.GetPtr<FData_UnitTest>())
+	{
+		TestEqual(TEXT("Shared manager reads same location value"), SharedLocationPtr->Value, LocationValue);
+	}
+	else
+	{
+		AddError(TEXT("Shared manager location data pointer is null"));
+	}
+
+	bool bSharedGridFound = false;
+	const FInstancedStruct SharedGrid = SharedManager->GetChannelDataByGridPoint(
+		GridChannelName, TestGridPoint, FData_UnitTest::StaticStruct(), bSharedGridFound);
+	TestTrue(TEXT("Shared manager can access grid channel"), bSharedGridFound);
+	if (const FData_UnitTest* SharedGridPtr = SharedGrid.GetPtr<FData_UnitTest>())
+	{
+		TestEqual(TEXT("Shared manager reads same grid value"), SharedGridPtr->Value, GridValue);
+	}
+	else
+	{
+		AddError(TEXT("Shared manager grid data pointer is null"));
+	}
+
+	TestTrue(TEXT("TryRemoveChannelByLocation succeeds"),
+	         PrimaryManager->TryRemoveChannelByLocation(LocationChannelName, TestLocation,
+	                                                    FData_UnitTest::StaticStruct()));
+	TestFalse(TEXT("Channel removed by location is no longer present"),
+	          PrimaryManager->HasChannelByLocation(LocationChannelName, TestLocation,
+	                                               FData_UnitTest::StaticStruct()));
+
+	TestTrue(TEXT("TryRemoveChannelByGridPoint succeeds"),
+	         PrimaryManager->TryRemoveChannelByGridPoint(GridChannelName, TestGridPoint,
+	                                                     FData_UnitTest::StaticStruct()));
+	TestFalse(TEXT("Channel removed by grid point is no longer present"),
+	          PrimaryManager->HasChannelByGridPoint(GridChannelName, TestGridPoint,
+	                                                FData_UnitTest::StaticStruct()));
+
+	PrimaryManager->Empty();
+	TestTrue(TEXT("Primary manager empty after cleanup"), PrimaryManager->IsEmpty());
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FChunk_ChunkLibraryConversionTest,
+                                 "SimpleChunkSystem.Library.Conversion",
+                                 EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+FORCEINLINE bool FChunk_ChunkLibraryConversionTest::RunTest(const FString& Parameters)
+{
+	TestNotNull(TEXT("GEngine is valid"), GEngine);
+	if (!GEngine)
+	{
+		return false;
+	}
+
+	const TIndirectArray<FWorldContext>& Contexts = GEngine->GetWorldContexts();
+	TestTrue(TEXT("Contexts are valid"), !Contexts.IsEmpty());
+	if (Contexts.IsEmpty())
+	{
+		return false;
+	}
+
+	const UWorld* World = Contexts[0].World();
+	TestNotNull(TEXT("World is valid"), World);
+	if (!World)
+	{
+		return false;
+	}
+
+	const UObject* WorldContextObject = World;
+	const FIntVector Origin = World->OriginLocation;
+	const double CellSize = UChunkBlueprintFunctionLibrary::GetCellSize();
+
+	{
+		const TArray<FVector> TestLocations = {
+			FVector(Origin) + FVector(CellSize * 0.25, CellSize * 1.75, 100.0),
+			FVector(Origin) + FVector(-CellSize * 2.2, CellSize * -0.5, -50.0),
+			FVector(Origin) + FVector(-CellSize * 3.0 - 10.0, CellSize * 4.0 + 10.0, 0.0)
+		};
+
+		for (const FVector& Location : TestLocations)
+		{
+			const int32 ExpectedX = FMath::FloorToInt((Location.X - Origin.X) / CellSize);
+			const int32 ExpectedY = FMath::FloorToInt((Location.Y - Origin.Y) / CellSize);
+
+			const FIntPoint Grid = UChunkBlueprintFunctionLibrary::ConvertGlobalLocationToGrid(
+				WorldContextObject, Location);
+
+			TestEqual(TEXT("Grid X matches expected"), Grid.X, ExpectedX);
+			TestEqual(TEXT("Grid Y matches expected"), Grid.Y, ExpectedY);
+		}
+	}
+
+	{
+		const FVector NullContextLocation = FVector(-CellSize * 3.1, CellSize * 4.6, 0.0);
+		const int32 ExpectedX = FMath::FloorToInt(NullContextLocation.X / CellSize);
+		const int32 ExpectedY = FMath::FloorToInt(NullContextLocation.Y / CellSize);
+
+		const FIntPoint Grid = UChunkBlueprintFunctionLibrary::ConvertGlobalLocationToGrid(
+			nullptr, NullContextLocation);
+
+		TestEqual(TEXT("Null context grid X matches zero-origin expected"), Grid.X, ExpectedX);
+		TestEqual(TEXT("Null context grid Y matches zero-origin expected"), Grid.Y, ExpectedY);
+	}
+
+	{
+		const TArray<FIntPoint> GridPoints = {FIntPoint(0, 0), FIntPoint(3, -2), FIntPoint(-5, 4)};
+
+		for (const FIntPoint& GridPoint : GridPoints)
+		{
+			const FVector2D Location =
+				UChunkBlueprintFunctionLibrary::ConvertGridToGlobalLocation(WorldContextObject, GridPoint);
+			const double ExpectedX = Origin.X + GridPoint.X * CellSize;
+			const double ExpectedY = Origin.Y + GridPoint.Y * CellSize;
+
+			TestTrue(TEXT("Grid to global X matches expected"),
+			         FMath::IsNearlyEqual(Location.X, ExpectedX, KINDA_SMALL_NUMBER));
+			TestTrue(TEXT("Grid to global Y matches expected"),
+			         FMath::IsNearlyEqual(Location.Y, ExpectedY, KINDA_SMALL_NUMBER));
+
+			const FVector2D CenterLocation = UChunkBlueprintFunctionLibrary::ConvertGridToGlobalLocationAtCenter(
+				WorldContextObject, GridPoint);
+			const double ExpectedCenterX = ExpectedX + CellSize / 2.0;
+			const double ExpectedCenterY = ExpectedY + CellSize / 2.0;
+
+			TestTrue(TEXT("Grid to global center X matches expected"),
+			         FMath::IsNearlyEqual(CenterLocation.X, ExpectedCenterX, KINDA_SMALL_NUMBER));
+			TestTrue(TEXT("Grid to global center Y matches expected"),
+			         FMath::IsNearlyEqual(CenterLocation.Y, ExpectedCenterY, KINDA_SMALL_NUMBER));
+		}
+	}
+
+	{
+		const FIntPoint GridPoint(7, -9);
+		const FVector2D Location = UChunkBlueprintFunctionLibrary::ConvertGridToGlobalLocation(nullptr, GridPoint);
+		const FVector2D CenterLocation = UChunkBlueprintFunctionLibrary::ConvertGridToGlobalLocationAtCenter(
+			nullptr, GridPoint);
+
+		TestEqual(TEXT("Null context grid to global returns zero"), Location, FVector2D::ZeroVector);
+		TestEqual(TEXT("Null context grid to global center returns zero"), CenterLocation, FVector2D::ZeroVector);
+	}
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FChunk_ChunkSubsystem_ManagerLifecycleTest,
+                                 "SimpleChunkSystem.Subsystem.ChunkSubsystem.ManagerLifecycle",
+                                 EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+FORCEINLINE bool FChunk_ChunkSubsystem_ManagerLifecycleTest::RunTest(const FString& Parameters)
+{
+	TestNotNull(TEXT("GEngine is valid"), GEngine);
+	if (!GEngine)
+	{
+		return false;
+	}
+
+	const TIndirectArray<FWorldContext>& Contexts = GEngine->GetWorldContexts();
+	TestTrue(TEXT("Contexts are valid"), !Contexts.IsEmpty());
+	if (Contexts.IsEmpty())
+	{
+		return false;
+	}
+
+	UWorld* World = Contexts[0].World();
+	TestNotNull(TEXT("World is valid"), World);
+	if (!World)
+	{
+		return false;
+	}
+
+	UChunkSubsystem* ChunkSubsystem = World->GetSubsystem<UChunkSubsystem>();
+	TestNotNull(TEXT("ChunkSubsystem is valid"), ChunkSubsystem);
+	if (!ChunkSubsystem)
+	{
+		return false;
+	}
+
+	const FString GuidString = FGuid::NewGuid().ToString(EGuidFormats::Digits);
+	const FName PrimaryKey = ChunkSubsystemUnitTest::MakeUniqueKey(TEXT("Primary"));
+	const FName SecondaryKey = ChunkSubsystemUnitTest::MakeUniqueKey(TEXT("Secondary"));
+	const FName SharedKey = ChunkSubsystemUnitTest::MakeUniqueKey(TEXT("Shared"));
+	const FName MissingKey = FName(*FString::Printf(TEXT("ChunkSubsystemUnitTest_Missing_%s"), *GuidString));
+
+	FChunkInitParameters InitParams;
+	InitParams.WorldContext = World;
+	InitParams.ChunkSize = 32;
+
+	TSet<FName> CreatedEventKeys;
+	struct FReplacedEventInfo
+	{
+		FName Key;
+		UChunkManagerBase* OldManager = nullptr;
+		UChunkManagerBase* NewManager = nullptr;
+	};
+	TArray<FReplacedEventInfo> ReplacedEventInfos;
+	struct FRemovedEventInfo
+	{
+		FName Key;
+		UChunkManagerBase* Manager = nullptr;
+	};
+	TArray<FRemovedEventInfo> RemovedEventInfos;
+
+	const FDelegateHandle CreatedHandle = FChunkSubsystemEvents::OnChunkManagerCreated().AddLambda(
+		[&](const FName Key, UChunkManagerBase* Manager)
+		{
+			CreatedEventKeys.Add(Key);
+		});
+
+	const FDelegateHandle ReplacedHandle = FChunkSubsystemEvents::OnChunkManagerReplaced().AddLambda(
+		[&](const FName Key, UChunkManagerBase* OldManager, UChunkManagerBase* NewManager)
+		{
+			ReplacedEventInfos.Add({Key, OldManager, NewManager});
+		});
+
+	const FDelegateHandle RemovedHandle = FChunkSubsystemEvents::OnChunkManagerRemoved().AddLambda(
+		[&](const FName Key, UChunkManagerBase* Manager)
+		{
+			RemovedEventInfos.Add({Key, Manager});
+		});
+
+	UChunkManagerBase* CreatedManager = ChunkSubsystem->CreateChunkManager(
+		PrimaryKey, UChunkManager_DynamicData::StaticClass(), InitParams);
+	TestNotNull(TEXT("CreateChunkManager returned manager"), CreatedManager);
+
+	UChunkManagerBase* RetrievedManager = ChunkSubsystem->GetChunkManager(PrimaryKey);
+	TestEqual(TEXT("GetChunkManager returned created manager"), RetrievedManager, CreatedManager);
+
+	UChunkManagerBase* DuplicateManager = ChunkSubsystem->CreateChunkManager(
+		PrimaryKey, UChunkManager_DynamicData::StaticClass(), InitParams);
+	TestNull(TEXT("CreateChunkManager with duplicate key returns nullptr"), DuplicateManager);
+
+	UChunkManagerBase* FoundManager = ChunkSubsystem->FindOrCreateChunkManager(
+		PrimaryKey, UChunkManager_DynamicData::StaticClass(), InitParams);
+	TestEqual(TEXT("FindOrCreateChunkManager returns existing manager"), FoundManager, CreatedManager);
+
+	UChunkManagerBase* SecondaryManager = ChunkSubsystem->FindOrCreateChunkManager(
+		SecondaryKey, UChunkManager_DynamicData::StaticClass(), InitParams);
+	TestNotNull(TEXT("FindOrCreateChunkManager created secondary manager"), SecondaryManager);
+
+	UChunkManager_DynamicData* ReplacementManager = NewObject<UChunkManager_DynamicData>(
+		ChunkSubsystem, UChunkManager_DynamicData::StaticClass());
+	TestNotNull(TEXT("Replacement manager created"), ReplacementManager);
+	if (ReplacementManager)
+	{
+		ReplacementManager->Initialize(InitParams);
+	}
+
+	const bool bReplaceResult = ChunkSubsystem->ReplaceChunkManager(PrimaryKey, ReplacementManager);
+	TestTrue(TEXT("ReplaceChunkManager succeeded"), bReplaceResult);
+
+	UChunkManagerBase* ReplacedManager = ChunkSubsystem->GetChunkManager(PrimaryKey);
+	TestTrue(TEXT("GetChunkManager returned replacement"), ReplacedManager == ReplacementManager);
+
+	UChunkManager_DynamicData* SharedContextManager = ChunkSubsystem->CreateChunkManagerWithSharedContextByKey(
+		SharedKey, UChunkManager_DynamicData::StaticClass(), PrimaryKey);
+	TestNotNull(TEXT("CreateChunkManagerWithSharedContextByKey returned manager"), SharedContextManager);
+
+	const bool bRemovedPrimary = ChunkSubsystem->RemoveChunkManager(PrimaryKey);
+	TestTrue(TEXT("RemoveChunkManager removed primary"), bRemovedPrimary);
+
+	const bool bRemovedPrimarySecondAttempt = ChunkSubsystem->RemoveChunkManager(PrimaryKey);
+	TestFalse(TEXT("RemoveChunkManager returns false when removing primary twice"), bRemovedPrimarySecondAttempt);
+
+	const bool bRemovedSecondary = ChunkSubsystem->RemoveChunkManager(SecondaryKey);
+	TestTrue(TEXT("RemoveChunkManager removed secondary"), bRemovedSecondary);
+
+	const bool bRemovedShared = ChunkSubsystem->RemoveChunkManager(SharedKey);
+	TestTrue(TEXT("RemoveChunkManager removed shared"), bRemovedShared);
+
+	const bool bRemovedMissing = ChunkSubsystem->RemoveChunkManager(MissingKey);
+	TestFalse(TEXT("RemoveChunkManager returns false when key does not exist"), bRemovedMissing);
+
+	TestTrue(TEXT("OnChunkManagerCreated triggered for primary key"), CreatedEventKeys.Contains(PrimaryKey));
+	TestTrue(TEXT("OnChunkManagerCreated triggered for secondary key"), CreatedEventKeys.Contains(SecondaryKey));
+	TestTrue(TEXT("OnChunkManagerCreated triggered for shared key"), CreatedEventKeys.Contains(SharedKey));
+
+	const FReplacedEventInfo* ReplaceInfo = ReplacedEventInfos.FindByPredicate(
+		[&](const FReplacedEventInfo& Info)
+		{
+			return Info.Key == PrimaryKey;
+		});
+	TestNotNull(TEXT("OnChunkManagerReplaced triggered for primary key"), ReplaceInfo);
+	if (ReplaceInfo)
+	{
+		TestTrue(TEXT("Replace event old manager matches"), ReplaceInfo->OldManager == CreatedManager);
+		TestTrue(TEXT("Replace event new manager matches"), ReplaceInfo->NewManager == ReplacementManager);
+	}
+
+	int32 RemovedEventsForPrimary = 0;
+	bool bRemovedSecondaryEventReceived = false;
+	bool bRemovedSharedEventReceived = false;
+	for (const FRemovedEventInfo& Info : RemovedEventInfos)
+	{
+		if (Info.Key == PrimaryKey)
+		{
+			++RemovedEventsForPrimary;
+		}
+		else if (Info.Key == SecondaryKey)
+		{
+			bRemovedSecondaryEventReceived = true;
+		}
+		else if (Info.Key == SharedKey)
+		{
+			bRemovedSharedEventReceived = true;
+		}
+	}
+	TestEqual(TEXT("OnChunkManagerRemoved triggered once for primary"), RemovedEventsForPrimary, 1);
+	TestTrue(TEXT("OnChunkManagerRemoved triggered for secondary"), bRemovedSecondaryEventReceived);
+	TestTrue(TEXT("OnChunkManagerRemoved triggered for shared"), bRemovedSharedEventReceived);
+
+	FChunkSubsystemEvents::OnChunkManagerCreated().Remove(CreatedHandle);
+	FChunkSubsystemEvents::OnChunkManagerReplaced().Remove(ReplacedHandle);
+	FChunkSubsystemEvents::OnChunkManagerRemoved().Remove(RemovedHandle);
+
 	return true;
 }
 

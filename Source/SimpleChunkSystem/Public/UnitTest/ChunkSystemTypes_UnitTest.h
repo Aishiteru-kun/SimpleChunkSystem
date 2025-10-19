@@ -25,6 +25,14 @@ struct SIMPLECHUNKSYSTEM_API FData_UnitTest : public FCellBaseInfo
 };
 
 USTRUCT()
+struct FData_Invalid_ChunkManagerUnitTest
+{
+	GENERATED_BODY()
+
+	int32 Value = 0;
+};
+
+USTRUCT()
 struct SIMPLECHUNKSYSTEM_API FData2_UnitTest : public FCellBaseInfo
 {
 	GENERATED_BODY()
