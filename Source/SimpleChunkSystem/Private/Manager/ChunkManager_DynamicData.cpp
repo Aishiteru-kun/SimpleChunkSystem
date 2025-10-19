@@ -190,8 +190,13 @@ TArray<FInstancedStruct> UChunkManager_DynamicData::GetChannelDataByLocations(co
 		return TArray<FInstancedStruct>();
 	}
 
+	const TArray<const FInstancedStruct*> Channels = ChunkSystem_DynamicData->FindExistingChannels(
+		InChannelName, InLocations, InExpectedStruct);
+
 	TArray<FInstancedStruct> Results;
-	Algo::Transform(ChunkSystem_DynamicData->FindOrAddChannels(InChannelName, InLocations, InExpectedStruct), Results,
+	Results.Reserve(Channels.Num());
+
+	Algo::Transform(Channels, Results,
 	                [](const FInstancedStruct* InData)
 	                {
 		                return *InData;
@@ -201,7 +206,7 @@ TArray<FInstancedStruct> UChunkManager_DynamicData::GetChannelDataByLocations(co
 }
 
 TArray<FInstancedStruct> UChunkManager_DynamicData::GetChannelDataByGridPoints(const FName InChannelName,
-                                                                               const TSet<FIntPoint>& InGridPoint,
+                                                                               const TSet<FIntPoint>& InGridPoints,
                                                                                UScriptStruct* InExpectedStruct) const
 {
 	if (!ChunkSystem_DynamicData)
@@ -216,14 +221,19 @@ TArray<FInstancedStruct> UChunkManager_DynamicData::GetChannelDataByGridPoints(c
 		return TArray<FInstancedStruct>();
 	}
 
-	if (InGridPoint.IsEmpty())
+	if (InGridPoints.IsEmpty())
 	{
 		SCHUNK_LOG(LogSChunkManager_DynamicData, Warning, TEXT("No grid points provided."));
 		return TArray<FInstancedStruct>();
 	}
 
+	const TArray<const FInstancedStruct*> Channels = ChunkSystem_DynamicData->FindExistingChannels(
+		InChannelName, InGridPoints, InExpectedStruct);
+
 	TArray<FInstancedStruct> Results;
-	Algo::Transform(ChunkSystem_DynamicData->FindOrAddChannels(InChannelName, InGridPoint, InExpectedStruct), Results,
+	Results.Reserve(Channels.Num());
+
+	Algo::Transform(Channels, Results,
 	                [](const FInstancedStruct* InData)
 	                {
 		                return *InData;
@@ -293,7 +303,7 @@ bool UChunkManager_DynamicData::TryRemoveChannelByLocations(const FName InChanne
 }
 
 bool UChunkManager_DynamicData::TryRemoveChannelByGridPoints(const FName InChannelName,
-                                                             const TSet<FIntPoint>& InGridPoint,
+                                                             const TSet<FIntPoint>& InGridPoints,
                                                              UScriptStruct* InExpectedStruct)
 {
 	if (!ChunkSystem_DynamicData)
@@ -308,13 +318,13 @@ bool UChunkManager_DynamicData::TryRemoveChannelByGridPoints(const FName InChann
 		return false;
 	}
 
-	if (InGridPoint.IsEmpty())
+	if (InGridPoints.IsEmpty())
 	{
 		SCHUNK_LOG(LogSChunkManager_DynamicData, Warning, TEXT("No grid points provided."));
 		return false;
 	}
 
-	return ChunkSystem_DynamicData->TryRemoveChannels(InChannelName, InGridPoint, InExpectedStruct);
+	return ChunkSystem_DynamicData->TryRemoveChannels(InChannelName, InGridPoints, InExpectedStruct);
 }
 
 bool UChunkManager_DynamicData::HasChannelByLocation(const FName InChannelName, const FVector InLocation,
@@ -377,7 +387,7 @@ bool UChunkManager_DynamicData::HasChannelByLocations(const FName InChannelName,
 	return ChunkSystem_DynamicData->HasChannels(InChannelName, InLocations, InExpectedStruct);
 }
 
-bool UChunkManager_DynamicData::HasChannelByGridPoints(const FName InChannelName, const TSet<FIntPoint>& InGridPoint,
+bool UChunkManager_DynamicData::HasChannelByGridPoints(const FName InChannelName, const TSet<FIntPoint>& InGridPoints,
                                                        UScriptStruct* InExpectedStruct) const
 {
 	if (!ChunkSystem_DynamicData)
@@ -392,13 +402,13 @@ bool UChunkManager_DynamicData::HasChannelByGridPoints(const FName InChannelName
 		return false;
 	}
 
-	if (InGridPoint.IsEmpty())
+	if (InGridPoints.IsEmpty())
 	{
 		SCHUNK_LOG(LogSChunkManager_DynamicData, Warning, TEXT("No grid points provided."));
 		return false;
 	}
 
-	return ChunkSystem_DynamicData->HasChannels(InChannelName, InGridPoint, InExpectedStruct);
+	return ChunkSystem_DynamicData->HasChannels(InChannelName, InGridPoints, InExpectedStruct);
 }
 
 bool UChunkManager_DynamicData::IsEmpty() const

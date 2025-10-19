@@ -76,7 +76,7 @@ public:
 			return nullptr;
 		}
 
-		return &this->Chunks[ChunkPoint]->FindOrAddChannel<TStruct>(Name, InGridPoint);
+		return &this->Chunks[ChunkPoint]->template FindOrAddChannel<TStruct>(Name, InGridPoint);
 	}
 
 	FORCEINLINE FInstancedStruct* GetChannel(const FName Name, const FVector& InLocation, UScriptStruct* Type)
@@ -127,7 +127,7 @@ public:
 			RegisterChannelLocation({Name, TStruct::StaticStruct()}, ChunkPoint);
 		}
 
-		return this->Chunks[ChunkPoint]->FindOrAddChannel<TStruct>(Name, InGridPoint);
+		return this->Chunks[ChunkPoint]->template FindOrAddChannel<TStruct>(Name, InGridPoint);
 	}
 
 	FORCEINLINE FInstancedStruct& FindOrAddChannel(const FName Name, const FVector& InLocation, UScriptStruct* Type)
@@ -189,7 +189,7 @@ public:
 					RegisterChannelLocation({Name, TStruct::StaticStruct()}, ChunkPoint);
 				}
 
-				Channels.Add(&this->Chunks[ChunkPoint]->FindOrAddChannel<TStruct>(Name, Point));
+				Channels.Add(&this->Chunks[ChunkPoint]->template FindOrAddChannel<TStruct>(Name, Point));
 			}
 		}
 
@@ -238,6 +238,76 @@ public:
 		return Channels;
 	}
 
+	FORCEINLINE const FInstancedStruct* FindExistingChannel(const FName Name, const FVector& InLocation,
+	                                                        UScriptStruct* Type) const
+	{
+		TRACE_CPUPROFILER_EVENT_SCOPE(TChunkSystem_DynamicData::FindExistingChannel)
+
+		const FIntPoint GridPoint = this->ConvertWorldToGridFunc(this->GetWorld(), InLocation);
+		return FindExistingChannel(Name, GridPoint, Type);
+	}
+
+	FORCEINLINE const FInstancedStruct* FindExistingChannel(const FName Name, const FIntPoint& InGridLocation,
+	                                                        UScriptStruct* Type) const
+	{
+		TRACE_CPUPROFILER_EVENT_SCOPE(TChunkSystem_DynamicData::FindExistingChannel)
+
+		const FIntPoint ChunkPoint = this->ConvertGlobalToChunkGrid(InGridLocation);
+		if (!this->Chunks.Contains(ChunkPoint))
+		{
+			return nullptr;
+		}
+
+		return this->Chunks[ChunkPoint]->FindChannel(Name, InGridLocation, Type);
+	}
+
+	FORCEINLINE TArray<const FInstancedStruct*> FindExistingChannels(const FName Name,
+	                                                                 const TSet<FVector>& InLocations,
+	                                                                 UScriptStruct* Type) const
+	{
+		TRACE_CPUPROFILER_EVENT_SCOPE(TChunkSystem_DynamicData::FindExistingChannels)
+
+		TSet<FIntPoint> GridLocations;
+		Algo::Transform(InLocations, GridLocations,
+		                [this](const FVector& Location) -> FIntPoint
+		                {
+			                return this->ConvertWorldToGridFunc(this->GetWorld(), Location);
+		                });
+
+		return FindExistingChannels(Name, GridLocations, Type);
+	}
+
+	FORCEINLINE TArray<const FInstancedStruct*> FindExistingChannels(const FName Name,
+	                                                                 const TSet<FIntPoint>& InGridLocations,
+	                                                                 UScriptStruct* Type) const
+	{
+		TRACE_CPUPROFILER_EVENT_SCOPE(TChunkSystem_DynamicData::FindExistingChannels)
+
+		TArray<const FInstancedStruct*> Channels;
+
+		for (const TPair<FIntPoint, TSet<FIntPoint>>& ChunkToGrid : this->SplitGridLocationsToChunks(InGridLocations))
+		{
+			const FIntPoint& ChunkPoint = ChunkToGrid.Key;
+			const TSet<FIntPoint>& GridPoints = ChunkToGrid.Value;
+
+			if (!this->Chunks.Contains(ChunkPoint))
+			{
+				continue;
+			}
+
+			for (const FIntPoint& Point : GridPoints)
+			{
+				if (const FInstancedStruct* const Struct = this->Chunks[ChunkPoint]->FindChannel(Name, Point, Type);
+					Struct)
+				{
+					Channels.Add(Struct);
+				}
+			}
+		}
+
+		return Channels;
+	}
+
 	template <typename TStruct>
 	FORCEINLINE bool TryRemoveChannel(const FName Name, const FVector& InLocation)
 	{
@@ -258,7 +328,7 @@ public:
 			return false;
 		}
 
-		const bool bRemoved = this->Chunks[ChunkPoint]->TryRemoveChannel<TStruct>(Name, InGridLocation);
+		const bool bRemoved = this->Chunks[ChunkPoint]->template TryRemoveChannel<TStruct>(Name, InGridLocation);
 		if (bRemoved)
 		{
 			UnregisterChannelLocation({Name, TStruct::StaticStruct()}, ChunkPoint);
@@ -328,7 +398,7 @@ public:
 
 			for (const FIntPoint& Point : GridPoints)
 			{
-				if (this->Chunks[ChunkPoint]->TryRemoveChannel<TStruct>(Name, Point))
+				if (this->Chunks[ChunkPoint]->template TryRemoveChannel<TStruct>(Name, Point))
 				{
 					UnregisterChannelLocation(Key, ChunkPoint);
 					bRemoved = true;
@@ -397,7 +467,13 @@ public:
 		TRACE_CPUPROFILER_EVENT_SCOPE(TChunkSystem_DynamicData_HasChannel::Template_HasChannel)
 
 		const FIntPoint ChunkPoint = this->ConvertGlobalToChunkGrid(InGridLocation);
-		return this->Chunks[ChunkPoint]->HasChannel<TStruct>(Name, InGridLocation);
+		TSharedPtr<FChunk_DynamicData> const* ChunkPtr = this->Chunks.Find(ChunkPoint);
+		if (!ChunkPtr || !ChunkPtr->IsValid())
+		{
+			return false;
+		}
+
+		return (*ChunkPtr)->HasChannel<TStruct>(Name, InGridLocation);
 	}
 
 	FORCEINLINE bool HasChannel(const FName Name, const FVector& InLocation, UScriptStruct* Type) const
@@ -413,12 +489,13 @@ public:
 		TRACE_CPUPROFILER_EVENT_SCOPE(TChunkSystem_DynamicData_HasChannel::HasChannel)
 
 		const FIntPoint ChunkPoint = this->ConvertGlobalToChunkGrid(InGridLocation);
-		if (!this->Chunks.Contains(ChunkPoint))
+		TSharedPtr<FChunk_DynamicData> const* ChunkPtr = this->Chunks.Find(ChunkPoint);
+		if (!ChunkPtr || !ChunkPtr->IsValid())
 		{
 			return false;
 		}
 
-		return this->Chunks[ChunkPoint]->HasChannel(Name, InGridLocation, Type);
+		return (*ChunkPtr)->HasChannel(Name, InGridLocation, Type);
 	}
 
 	template <typename TStruct>
@@ -446,14 +523,15 @@ public:
 			const FIntPoint& ChunkPoint = ChunkToGrid.Key;
 			const TSet<FIntPoint>& GridPoints = ChunkToGrid.Value;
 
-			if (!this->Chunks.Contains(ChunkPoint))
+			TSharedPtr<FChunk_DynamicData> const* ChunkPtr = this->Chunks.Find(ChunkPoint);
+			if (!ChunkPtr || !ChunkPtr->IsValid())
 			{
 				return false;
 			}
 
 			for (const FIntPoint& Point : GridPoints)
 			{
-				if (!this->Chunks[ChunkPoint]->HasChannel<TStruct>(Name, Point))
+				if (!(*ChunkPtr)->HasChannel<TStruct>(Name, Point))
 				{
 					return false;
 				}
@@ -486,14 +564,15 @@ public:
 			const FIntPoint& ChunkPoint = ChunkToGrid.Key;
 			const TSet<FIntPoint>& GridPoints = ChunkToGrid.Value;
 
-			if (!this->Chunks.Contains(ChunkPoint))
+			TSharedPtr<FChunk_DynamicData> const* ChunkPtr = this->Chunks.Find(ChunkPoint);
+			if (!ChunkPtr || !ChunkPtr->IsValid())
 			{
 				return false;
 			}
 
 			for (const FIntPoint& Point : GridPoints)
 			{
-				if (!this->Chunks[ChunkPoint]->HasChannel(Name, Point, Type))
+				if (!(*ChunkPtr)->HasChannel(Name, Point, Type))
 				{
 					return false;
 				}
@@ -566,7 +645,7 @@ private:
 
 			FIterator(OwnerType InOwner,
 			          const FCellChannelKey* InKey,
-			          const TArray<FIntPoint>* InChunkPoints,
+			          const TSet<FIntPoint>* InChunkPoints,
 			          int32 InIndex)
 				: Owner(InOwner)
 				  , Key(InKey)
@@ -577,11 +656,10 @@ private:
 					return;
 				}
 
-				TSet<FIntPoint> UniqueChunkPoints(*InChunkPoints);
-				PerChunkRanges.Reserve(UniqueChunkPoints.Num());
-				PerChunkIterators.Reserve(UniqueChunkPoints.Num());
+				PerChunkRanges.Reserve(InChunkPoints->Num());
+				PerChunkIterators.Reserve(InChunkPoints->Num());
 
-				for (const FIntPoint& ChunkPoint : UniqueChunkPoints)
+				for (const FIntPoint& ChunkPoint : *InChunkPoints)
 				{
 					const TSharedPtr<FChunk_DynamicData, ESPMode::ThreadSafe>* const ChunkPtr =
 						Owner->Chunks.Find(ChunkPoint);
@@ -593,12 +671,12 @@ private:
 					if constexpr (bConst)
 					{
 						const FChunk_DynamicData& ChunkRef = *ChunkPtr->Get();
-						PerChunkRanges.Emplace(ChunkRef.template IterateChannel<TStruct>(Key->ChannelName));
+						PerChunkRanges.Emplace(ChunkRef.IterateChannel<TStruct>(Key->ChannelName));
 					}
 					else
 					{
 						FChunk_DynamicData& ChunkRef = *ChunkPtr->Get();
-						PerChunkRanges.Emplace(ChunkRef.template IterateChannel<TStruct>(Key->ChannelName));
+						PerChunkRanges.Emplace(ChunkRef.IterateChannel<TStruct>(Key->ChannelName));
 					}
 
 					PerChunkIterators.Emplace(PerChunkRanges.Last().begin());
@@ -682,13 +760,7 @@ private:
 
 			if (TArray<FIntPoint> Found = Owner->FindChannelLocations(Key); !Found.IsEmpty())
 			{
-				TSet<FIntPoint> UniqueChunkPoints(MoveTemp(Found));
-				Locations.Reserve(UniqueChunkPoints.Num());
-
-				for (const FIntPoint& Point : UniqueChunkPoints)
-				{
-					Locations.Emplace(Point);
-				}
+				Locations = TSet<FIntPoint>(MoveTemp(Found));
 			}
 		}
 
@@ -715,7 +787,7 @@ private:
 	private:
 		OwnerType Owner = nullptr;
 		FCellChannelKey Key;
-		TArray<FIntPoint> Locations;
+		TSet<FIntPoint> Locations;
 	};
 
 	bool TryRemoveChunkInternal(const FIntPoint& InChunkGridLocation)

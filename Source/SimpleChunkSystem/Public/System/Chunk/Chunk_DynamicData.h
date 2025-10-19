@@ -2,7 +2,6 @@
 
 #include "CoreMinimal.h"
 #include "ChunkBase.h"
-#include "ChunkLogCategory.h"
 #include "StructUtils/InstancedStruct.h"
 #include "Chunk_DynamicData.generated.h"
 
@@ -404,7 +403,7 @@ class FChunk_DynamicData::TChannelIteratorRangeImpl
 			return !(*this == Other);
 		}
 
-		bool IsValid() const 
+		bool IsValid() const
 		{
 			return Index < Locations->Num();
 		}

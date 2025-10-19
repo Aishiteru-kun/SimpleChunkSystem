@@ -1,5 +1,6 @@
 ﻿#include "System/Chunk/Chunk_DynamicData.h"
 
+#include "ChunkLogCategory.h"
 #include "Manager/ChunkManagerBase.h"
 
 void FCellChannelKey::Serialize(FArchive& Ar)
@@ -157,6 +158,11 @@ void FCellDynamicInfo::DrawDebug(const UWorld* World, const FVector& CellCenter)
 {
 	for (const TPair<FCellChannelKey, TOptional<FInstancedStruct>>& Channel : Channels)
 	{
+		if (!Channel.Value.IsSet())
+		{
+			continue;
+		}
+
 		Channel.Value->GetPtr<FCellBaseInfo>()->DrawDebug(World, CellCenter);
 	}
 }

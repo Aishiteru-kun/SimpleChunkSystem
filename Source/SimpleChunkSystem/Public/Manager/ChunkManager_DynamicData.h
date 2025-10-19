@@ -69,7 +69,7 @@ public:
 	                                                   UScriptStruct* InExpectedStruct) const;
 
 	UFUNCTION(BlueprintCallable, Category = "Chunk Manager")
-	TArray<FInstancedStruct> GetChannelDataByGridPoints(const FName InChannelName, const TSet<FIntPoint>& InGridPoint,
+	TArray<FInstancedStruct> GetChannelDataByGridPoints(const FName InChannelName, const TSet<FIntPoint>& InGridPoints,
 	                                                    UScriptStruct* InExpectedStruct) const;
 
 	UFUNCTION(BlueprintCallable, Category = "Chunk Manager")
@@ -85,7 +85,7 @@ public:
 	                                 UScriptStruct* InExpectedStruct);
 
 	UFUNCTION(BlueprintCallable, Category = "Chunk Manager")
-	bool TryRemoveChannelByGridPoints(const FName InChannelName, const TSet<FIntPoint>& InGridPoint,
+	bool TryRemoveChannelByGridPoints(const FName InChannelName, const TSet<FIntPoint>& InGridPoints,
 	                                  UScriptStruct* InExpectedStruct);
 
 	UFUNCTION(BlueprintCallable, Category = "Chunk Manager")
@@ -101,7 +101,7 @@ public:
 	                           UScriptStruct* InExpectedStruct) const;
 
 	UFUNCTION(BlueprintCallable, Category = "Chunk Manager")
-	bool HasChannelByGridPoints(const FName InChannelName, const TSet<FIntPoint>& InGridPoint,
+	bool HasChannelByGridPoints(const FName InChannelName, const TSet<FIntPoint>& InGridPoints,
 	                            UScriptStruct* InExpectedStruct) const;
 
 	UFUNCTION(BlueprintCallable, Category = "Chunk Manager")

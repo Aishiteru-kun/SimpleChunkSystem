@@ -219,6 +219,70 @@ FORCEINLINE bool FChunk_ChunkSystem_DynamicDataTest::RunTest(const FString& Para
 	}
 
 	{
+		const FIntPoint MissingGridLocation(987, 654);
+		TSet<FIntPoint> QueryPoints;
+		QueryPoints.Add(TestCase4_Location);
+		QueryPoints.Add(MissingGridLocation);
+
+		const TArray<const FInstancedStruct*> Channels = ChunkSystem->FindExistingChannels(
+			TestCase4_ChannelName, QueryPoints, FData_UnitTest::StaticStruct());
+
+		TestEqual(TEXT("FindExistingChannels (grid) returns existing entries only"), Channels.Num(), 1);
+
+		if (!Channels.IsEmpty())
+		{
+			const FData_UnitTest* const DataPtr = Channels[0]->GetPtr<FData_UnitTest>();
+			TestNotNull(TEXT("FindExistingChannels (grid) returns valid data"), DataPtr);
+			if (DataPtr)
+			{
+				TestEqual(TEXT("FindExistingChannels (grid) preserves stored value"), DataPtr->Value,
+				          TestChannel_Value);
+			}
+		}
+
+		TestFalse(TEXT("FindExistingChannels (grid) does not create missing entries"),
+		          ChunkSystem->HasChannel<FData_UnitTest>(TestCase4_ChannelName, MissingGridLocation));
+	}
+
+	{
+		const FVector AdditionalLocation(1234.f, 5678.f, 0.f);
+		const FVector MissingLocation(4321.f, 8765.f, 0.f);
+		const int32 AdditionalValue = 777;
+
+		{
+			FInstancedStruct& AdditionalData = ChunkSystem->FindOrAddChannel<FData_UnitTest>(
+				TestChannel_ChannelName, AdditionalLocation);
+			AdditionalData.GetMutablePtr<FData_UnitTest>()->Value = AdditionalValue;
+		}
+
+		TSet<FVector> QueryLocations;
+		QueryLocations.Add(AdditionalLocation);
+		QueryLocations.Add(MissingLocation);
+
+		const TArray<const FInstancedStruct*> Channels = ChunkSystem->FindExistingChannels(
+			TestChannel_ChannelName, QueryLocations, FData_UnitTest::StaticStruct());
+
+		TestEqual(TEXT("FindExistingChannels (world) returns existing entries only"), Channels.Num(), 1);
+
+		if (!Channels.IsEmpty())
+		{
+			const FData_UnitTest* const DataPtr = Channels[0]->GetPtr<FData_UnitTest>();
+			TestNotNull(TEXT("FindExistingChannels (world) returns valid data"), DataPtr);
+			if (DataPtr)
+			{
+				TestEqual(TEXT("FindExistingChannels (world) preserves stored value"), DataPtr->Value,
+				          AdditionalValue);
+			}
+		}
+
+		TestFalse(TEXT("FindExistingChannels (world) does not create missing entries"),
+		          ChunkSystem->HasChannel<FData_UnitTest>(TestChannel_ChannelName, MissingLocation));
+
+		TestTrue(TEXT("Cleanup temporary world location entry"),
+		         ChunkSystem->TryRemoveChannel<FData_UnitTest>(TestChannel_ChannelName, AdditionalLocation));
+	}
+
+	{
 		const FIntPoint TargetChunk = ChunkSystem->ConvertGlobalToChunkGrid(TestCase4_Location);
 		TSharedPtr<FChunk_DynamicData, ESPMode::ThreadSafe>* const ChunkPtr = ChunkSystem->Chunks.Find(TargetChunk);
 		TestNotNull(TEXT("Chunk exists for iterator test"), ChunkPtr ? ChunkPtr->Get() : nullptr);
@@ -296,7 +360,8 @@ FORCEINLINE bool FChunk_ChunkSystem_DynamicDataTest::RunTest(const FString& Para
 		for (int32 Index = 0; Index < SystemIterator_Cells.Num(); ++Index)
 		{
 			const int32 StoredValue = 100 + Index;
-			FInstancedStruct& ChannelData = ChunkSystem->FindOrAddChannel<FData_UnitTest>(SystemIterator_ChannelName, SystemIterator_Cells[Index]);
+			FInstancedStruct& ChannelData = ChunkSystem->FindOrAddChannel<FData_UnitTest>(
+				SystemIterator_ChannelName, SystemIterator_Cells[Index]);
 			ChannelData.GetMutablePtr<FData_UnitTest>()->Value = StoredValue;
 			ExpectedValuesByCell.Add(SystemIterator_Cells[Index], StoredValue);
 		}
@@ -311,7 +376,7 @@ FORCEINLINE bool FChunk_ChunkSystem_DynamicDataTest::RunTest(const FString& Para
 			auto Range = ChunkSystem->IterateChannel<FData_UnitTest>(SystemIterator_ChannelName);
 			TestFalse(TEXT("System iterator IsEmpty() == false"), Range.IsEmpty());
 			TestEqual(TEXT("System iterator Num() equals number of unique chunks"),
-				Range.Num(), UniqueChunksForSystemIterator.Num());
+			          Range.Num(), UniqueChunksForSystemIterator.Num());
 
 			int32 TotalVisitedCells = 0;
 			TSet<FIntPoint> SeenCells;
@@ -324,7 +389,8 @@ FORCEINLINE bool FChunk_ChunkSystem_DynamicDataTest::RunTest(const FString& Para
 				TestTrue(TEXT("Visited cell exists in expected set"), ExpectedValuesByCell.Contains(VisitedCell));
 				if (ExpectedValuesByCell.Contains(VisitedCell))
 				{
-					TestEqual(TEXT("Visited value matches stored value"), VisitedValue.Value, ExpectedValuesByCell[VisitedCell]);
+					TestEqual(TEXT("Visited value matches stored value"), VisitedValue.Value,
+					          ExpectedValuesByCell[VisitedCell]);
 				}
 
 				TestFalse(TEXT("No duplicate cells in system iterator"), SeenCells.Contains(VisitedCell));
@@ -332,9 +398,9 @@ FORCEINLINE bool FChunk_ChunkSystem_DynamicDataTest::RunTest(const FString& Para
 			}
 
 			TestEqual(TEXT("Total visited cells equals inserted cells (no duplicates)"),
-				TotalVisitedCells, SystemIterator_Cells.Num());
+			          TotalVisitedCells, SystemIterator_Cells.Num());
 			TestEqual(TEXT("Visited unique set size equals inserted cells"),
-				SeenCells.Num(), SystemIterator_Cells.Num());
+			          SeenCells.Num(), SystemIterator_Cells.Num());
 		}
 
 		{
@@ -346,7 +412,7 @@ FORCEINLINE bool FChunk_ChunkSystem_DynamicDataTest::RunTest(const FString& Para
 				++ManualSteps;
 			}
 			TestEqual(TEXT("Manual ++ iteration over system iterator steps equals total entries"),
-				ManualSteps, SystemIterator_Cells.Num());
+			          ManualSteps, SystemIterator_Cells.Num());
 		}
 
 		{
@@ -361,17 +427,21 @@ FORCEINLINE bool FChunk_ChunkSystem_DynamicDataTest::RunTest(const FString& Para
 				const FIntPoint& VisitedCell = Entry.Key;
 				const FData_UnitTest& VisitedValue = Entry.Value;
 
-				TestTrue(TEXT("Const range: visited cell exists in expected set"), ExpectedValuesByCell.Contains(VisitedCell));
+				TestTrue(
+					TEXT("Const range: visited cell exists in expected set"),
+					ExpectedValuesByCell.Contains(VisitedCell));
 				if (ExpectedValuesByCell.Contains(VisitedCell))
 				{
-					TestEqual(TEXT("Const range: visited value matches stored value"), VisitedValue.Value, ExpectedValuesByCell[VisitedCell]);
+					TestEqual(TEXT("Const range: visited value matches stored value"), VisitedValue.Value,
+					          ExpectedValuesByCell[VisitedCell]);
 				}
 
 				TestFalse(TEXT("Const range: no duplicate cells"), SeenCellsConst.Contains(VisitedCell));
 				SeenCellsConst.Add(VisitedCell);
 			}
 
-			TestEqual(TEXT("Const range: total visited equals total inserted"), TotalVisitedCellsConst, SystemIterator_Cells.Num());
+			TestEqual(TEXT("Const range: total visited equals total inserted"), TotalVisitedCellsConst,
+			          SystemIterator_Cells.Num());
 		}
 
 		{
@@ -387,7 +457,8 @@ FORCEINLINE bool FChunk_ChunkSystem_DynamicDataTest::RunTest(const FString& Para
 
 			for (const FIntPoint& CellToRemove : CellsToRemoveFromChannel)
 			{
-				const bool bRemoved = ChunkSystem->TryRemoveChannel<FData_UnitTest>(SystemIterator_ChannelName, CellToRemove);
+				const bool bRemoved = ChunkSystem->TryRemoveChannel<FData_UnitTest>(
+					SystemIterator_ChannelName, CellToRemove);
 				TestTrue(TEXT("Removed cell from channel (partial removal)"), bRemoved);
 				ExpectedValuesByCell.Remove(CellToRemove);
 			}
@@ -398,13 +469,15 @@ FORCEINLINE bool FChunk_ChunkSystem_DynamicDataTest::RunTest(const FString& Para
 			for (const auto Entry : RangeAfterPartialRemoval)
 			{
 				++TotalVisitedAfterPartialRemoval;
-				TestTrue(TEXT("After partial removal: only expected cells are visited"), ExpectedValuesByCell.Contains(Entry.Key));
+				TestTrue(
+					TEXT("After partial removal: only expected cells are visited"),
+					ExpectedValuesByCell.Contains(Entry.Key));
 				SeenAfterPartialRemoval.Add(Entry.Key);
 			}
 			TestEqual(TEXT("After partial removal: visited count equals remaining expected cells"),
-				TotalVisitedAfterPartialRemoval, ExpectedValuesByCell.Num());
+			          TotalVisitedAfterPartialRemoval, ExpectedValuesByCell.Num());
 			TestEqual(TEXT("After partial removal: unique visited equals remaining"),
-				SeenAfterPartialRemoval.Num(), ExpectedValuesByCell.Num());
+			          SeenAfterPartialRemoval.Num(), ExpectedValuesByCell.Num());
 		}
 
 		{
@@ -430,7 +503,8 @@ FORCEINLINE bool FChunk_ChunkSystem_DynamicDataTest::RunTest(const FString& Para
 				         ExpectedValuesByCell.Contains(Entry.Key));
 				SeenAfterChunkRemoval.Add(Entry.Key);
 			}
-			TestEqual(TEXT("After chunk removal: visited == remaining"), SeenAfterChunkRemoval.Num(), ExpectedValuesByCell.Num());
+			TestEqual(TEXT("After chunk removal: visited == remaining"), SeenAfterChunkRemoval.Num(),
+			          ExpectedValuesByCell.Num());
 
 			TSet<FIntPoint> UniqueChunksLeft;
 			for (const TPair<FIntPoint, int32>& Pair : ExpectedValuesByCell)
@@ -446,7 +520,8 @@ FORCEINLINE bool FChunk_ChunkSystem_DynamicDataTest::RunTest(const FString& Para
 			ExpectedValuesByCell.GetKeys(RemainingCells);
 			for (const FIntPoint& RemainingCell : RemainingCells)
 			{
-				const bool bRemoved = ChunkSystem->TryRemoveChannel<FData_UnitTest>(SystemIterator_ChannelName, RemainingCell);
+				const bool bRemoved = ChunkSystem->TryRemoveChannel<FData_UnitTest>(
+					SystemIterator_ChannelName, RemainingCell);
 				TestTrue(TEXT("Removed remaining cell"), bRemoved);
 			}
 			ExpectedValuesByCell.Empty();
@@ -642,7 +717,8 @@ FORCEINLINE bool FChunk_ChunkSystem_SystemIteratorTest::RunTest(const FString& P
 	for (int32 Index = 0; Index < SystemIterator_Cells.Num(); ++Index)
 	{
 		const int32 StoredValue = 100 + Index;
-		FInstancedStruct& ChannelData = ChunkSystem->FindOrAddChannel<FData_UnitTest>(SystemIterator_ChannelName, SystemIterator_Cells[Index]);
+		FInstancedStruct& ChannelData = ChunkSystem->FindOrAddChannel<FData_UnitTest>(
+			SystemIterator_ChannelName, SystemIterator_Cells[Index]);
 		ChannelData.GetMutablePtr<FData_UnitTest>()->Value = StoredValue;
 		ExpectedValuesByCell.Add(SystemIterator_Cells[Index], StoredValue);
 	}
@@ -670,7 +746,8 @@ FORCEINLINE bool FChunk_ChunkSystem_SystemIteratorTest::RunTest(const FString& P
 			TestTrue(TEXT("Visited cell exists in expected set"), ExpectedValuesByCell.Contains(VisitedCell));
 			if (ExpectedValuesByCell.Contains(VisitedCell))
 			{
-				TestEqual(TEXT("Visited value matches stored value"), VisitedValue.Value, ExpectedValuesByCell[VisitedCell]);
+				TestEqual(TEXT("Visited value matches stored value"), VisitedValue.Value,
+				          ExpectedValuesByCell[VisitedCell]);
 			}
 
 			TestFalse(TEXT("No duplicate cells in system iterator"), SeenCells.Contains(VisitedCell));
@@ -707,10 +784,12 @@ FORCEINLINE bool FChunk_ChunkSystem_SystemIteratorTest::RunTest(const FString& P
 			const FIntPoint& VisitedCell = Entry.Key;
 			const FData_UnitTest& VisitedValue = Entry.Value;
 
-			TestTrue(TEXT("Const range: visited cell exists in expected set"), ExpectedValuesByCell.Contains(VisitedCell));
+			TestTrue(
+				TEXT("Const range: visited cell exists in expected set"), ExpectedValuesByCell.Contains(VisitedCell));
 			if (ExpectedValuesByCell.Contains(VisitedCell))
 			{
-				TestEqual(TEXT("Const range: visited value matches stored value"), VisitedValue.Value, ExpectedValuesByCell[VisitedCell]);
+				TestEqual(TEXT("Const range: visited value matches stored value"), VisitedValue.Value,
+				          ExpectedValuesByCell[VisitedCell]);
 			}
 
 			TestFalse(TEXT("Const range: no duplicate cells"), SeenCellsConst.Contains(VisitedCell));
@@ -734,7 +813,8 @@ FORCEINLINE bool FChunk_ChunkSystem_SystemIteratorTest::RunTest(const FString& P
 
 		for (const FIntPoint& CellToRemove : CellsToRemoveFromChannel)
 		{
-			const bool bRemoved = ChunkSystem->TryRemoveChannel<FData_UnitTest>(SystemIterator_ChannelName, CellToRemove);
+			const bool bRemoved = ChunkSystem->TryRemoveChannel<FData_UnitTest>(
+				SystemIterator_ChannelName, CellToRemove);
 			TestTrue(TEXT("Removed cell from channel (partial removal)"), bRemoved);
 			ExpectedValuesByCell.Remove(CellToRemove);
 		}
@@ -745,7 +825,9 @@ FORCEINLINE bool FChunk_ChunkSystem_SystemIteratorTest::RunTest(const FString& P
 		for (const auto Entry : RangeAfterPartialRemoval)
 		{
 			++TotalVisitedAfterPartialRemoval;
-			TestTrue(TEXT("After partial removal: only expected cells are visited"), ExpectedValuesByCell.Contains(Entry.Key));
+			TestTrue(
+				TEXT("After partial removal: only expected cells are visited"),
+				ExpectedValuesByCell.Contains(Entry.Key));
 			SeenAfterPartialRemoval.Add(Entry.Key);
 		}
 		TestEqual(TEXT("After partial removal: visited count equals remaining expected cells"),
@@ -777,7 +859,8 @@ FORCEINLINE bool FChunk_ChunkSystem_SystemIteratorTest::RunTest(const FString& P
 			         ExpectedValuesByCell.Contains(Entry.Key));
 			SeenAfterChunkRemoval.Add(Entry.Key);
 		}
-		TestEqual(TEXT("After chunk removal: visited == remaining"), SeenAfterChunkRemoval.Num(), ExpectedValuesByCell.Num());
+		TestEqual(TEXT("After chunk removal: visited == remaining"), SeenAfterChunkRemoval.Num(),
+		          ExpectedValuesByCell.Num());
 
 		TSet<FIntPoint> UniqueChunksLeft;
 		for (const TPair<FIntPoint, int32>& Pair : ExpectedValuesByCell)
@@ -793,7 +876,8 @@ FORCEINLINE bool FChunk_ChunkSystem_SystemIteratorTest::RunTest(const FString& P
 		ExpectedValuesByCell.GetKeys(RemainingCells);
 		for (const FIntPoint& RemainingCell : RemainingCells)
 		{
-			const bool bRemoved = ChunkSystem->TryRemoveChannel<FData_UnitTest>(SystemIterator_ChannelName, RemainingCell);
+			const bool bRemoved = ChunkSystem->TryRemoveChannel<FData_UnitTest>(
+				SystemIterator_ChannelName, RemainingCell);
 			TestTrue(TEXT("Removed remaining cell"), bRemoved);
 		}
 		ExpectedValuesByCell.Empty();
@@ -872,20 +956,21 @@ FORCEINLINE bool FChunk_ChunkSystem_BulkOpsTest::RunTest(const FString& Paramete
 	}
 
 	{
-		const TSet<FIntPoint> ToRemove = { FIntPoint(3,4), FIntPoint(7,0) };
+		const TSet<FIntPoint> ToRemove = {FIntPoint(3, 4), FIntPoint(7, 0)};
 		TestTrue(TEXT("TryRemoveChannels partial succeeded"),
 		         ChunkSystem->TryRemoveChannels<FData2_UnitTest>(ChannelName, ToRemove));
 		TestFalse(TEXT("HasChannels returns false for removed subset"),
 		          ChunkSystem->HasChannels<FData2_UnitTest>(ChannelName, ToRemove));
 
-		const TSet<FIntPoint> StillPresent = { FIntPoint(6,6), FIntPoint(13,13) };
+		const TSet<FIntPoint> StillPresent = {FIntPoint(6, 6), FIntPoint(13, 13)};
 		TestTrue(TEXT("HasChannels returns true for remaining subset"),
 		         ChunkSystem->HasChannels<FData2_UnitTest>(ChannelName, StillPresent));
 	}
 
 	{
 		TestTrue(TEXT("TryRemoveChannels remaining succeeded"),
-		         ChunkSystem->TryRemoveChannels<FData2_UnitTest>(ChannelName, TSet<FIntPoint>{ FIntPoint(6,6), FIntPoint(13,13) }));
+		         ChunkSystem->TryRemoveChannels<FData2_UnitTest>(ChannelName,
+		                                                         TSet<FIntPoint>{FIntPoint(6, 6), FIntPoint(13, 13)}));
 		TestFalse(TEXT("HasChannels returns false for all after full removal"),
 		          ChunkSystem->HasChannels<FData2_UnitTest>(ChannelName, GridLocations));
 	}
