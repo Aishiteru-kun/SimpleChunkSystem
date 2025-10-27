@@ -575,6 +575,19 @@ public:
 	}
 
 	template <typename TStruct>
+	TSet<FIntPoint> const* FindChannelLocations(const FName Name) const
+	{
+		const FCellChannelKey Key{Name, TStruct::StaticStruct()};
+		return FindChannelLocations(Key);
+	}
+
+	TSet<FIntPoint> const* FindChannelLocations(const FName Name, UScriptStruct* Type) const
+	{
+		const FCellChannelKey Key{Name, Type};
+		return FindChannelLocations(Key);
+	}
+
+	template <typename TStruct>
 	TChannelIteratorRange<TStruct> IterateChannel(const FName Name)
 	{
 		const FCellChannelKey Key{Name, TStruct::StaticStruct()};
@@ -750,9 +763,10 @@ private:
 				return;
 			}
 
-			if (TArray<FIntPoint> Found = Owner->FindChannelLocations(Key); !Found.IsEmpty())
+			if (TSet<FIntPoint> const* Found = Owner->FindChannelLocations(Key);
+				Found && !Found->IsEmpty())
 			{
-				Locations = TSet<FIntPoint>(MoveTemp(Found));
+				Locations = *Found;
 			}
 		}
 
@@ -817,7 +831,7 @@ private:
 			return;
 		}
 
-		ChannelIndex.Add(Key, InChunkPoint);
+		ChannelIndex.FindOrAdd(Key).Emplace(InChunkPoint);
 	}
 
 	void UnregisterChannelLocation(const FCellChannelKey& Key, const FIntPoint& InChunkPoint)
@@ -827,25 +841,28 @@ private:
 			return;
 		}
 
-		if (TArray<FIntPoint> Locations = FindChannelLocations(Key);
-			Locations.Contains(InChunkPoint))
+		if (TSet<FIntPoint>* Locations = FindChannelLocations(Key);
+			Locations && Locations->Contains(InChunkPoint))
 		{
-			if (Locations.Num() - 1 == 0)
+			if (Locations->Num() - 1 == 0)
 			{
 				ChannelIndex.Remove(Key);
 			}
 			else
 			{
-				ChannelIndex.RemoveSingle(Key, InChunkPoint);
+				Locations->Remove(InChunkPoint);
 			}
 		}
 	}
 
-	TArray<FIntPoint> FindChannelLocations(const FCellChannelKey& Key) const
+	TSet<FIntPoint> const* FindChannelLocations(const FCellChannelKey& Key) const
 	{
-		TArray<FIntPoint> Locations;
-		ChannelIndex.MultiFind(Key, Locations);
-		return MoveTemp(Locations);
+		return ChannelIndex.Find(Key);
+	}
+
+	TSet<FIntPoint>* FindChannelLocations(const FCellChannelKey& Key)
+	{
+		return ChannelIndex.Find(Key);
 	}
 
 	void RebuildChannelIndex(const int32 ExpectedNumElements = 0)
@@ -871,5 +888,5 @@ private:
 	}
 
 private:
-	TMultiMap<FCellChannelKey, FIntPoint> ChannelIndex;
+	TMap<FCellChannelKey, TSet<FIntPoint>> ChannelIndex;
 };
