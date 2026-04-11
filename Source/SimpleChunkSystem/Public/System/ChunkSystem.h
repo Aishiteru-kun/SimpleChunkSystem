@@ -12,6 +12,14 @@ DEFINE_LOG_CATEGORY_STATIC(LogSChunkSystemLocal, Log, All)
 
 using FConvertWorldToGrid = FIntPoint(*)(const UObject*, const FVector&);
 
+namespace ChunkMath
+{
+	FORCEINLINE int32 DivFloor(const int32 Value, const int32 Divisor)
+	{
+		return Value >= 0 ? Value / Divisor : -((-Value + Divisor - 1) / Divisor);
+	}
+}
+
 /**
  * Template base class that manages a collection of chunks.
  *
@@ -21,7 +29,6 @@ using FConvertWorldToGrid = FIntPoint(*)(const UObject*, const FVector&);
  *
  * @tparam Type               Chunk class stored inside the system. Must derive from FChunkBase.
  * @tparam bIsSerialize       Enables or disables serialization support.
- * @tparam FuncConv           Function used to convert world locations to grid coordinates.
  */
 template <typename Type, bool bIsSerialize = true, FConvertWorldToGrid FuncConv =
 	          UChunkBlueprintFunctionLibrary::ConvertGlobalLocationToGrid>
@@ -29,7 +36,7 @@ class TChunkSystemBase
 {
 	static_assert(TIsDerivedFrom<Type, FChunkBase>::Value, "Type must be derived from FChunkBase");
 
-	friend class FChunk_DivFloorTest;
+	friend class FChunk_ChunkSystem_DynamicDataTest;
 	friend class FChunk_ChunkSystem_SystemIteratorTest;
 	friend class FChunk_ChunkSystem_ChannelIndexRebuildTest;
 
@@ -202,8 +209,8 @@ protected:
 
 	FORCEINLINE FIntPoint ConvertGlobalToChunkGrid(const FIntPoint& InGlobalGridLocation) const
 	{
-		const int32 ChunkX = DivFloor(InGlobalGridLocation.X, ChunkSize);
-		const int32 ChunkY = DivFloor(InGlobalGridLocation.Y, ChunkSize);
+		const int32 ChunkX = ChunkMath::DivFloor(InGlobalGridLocation.X, ChunkSize);
+		const int32 ChunkY = ChunkMath::DivFloor(InGlobalGridLocation.Y, ChunkSize);
 
 		return FIntPoint(ChunkX, ChunkY);
 	}
@@ -241,11 +248,6 @@ protected:
 	TMap<FIntPoint, FChunkPtr> Chunks;
 
 private:
-	FORCEINLINE int32 DivFloor(const int32 Value, const int32 Divisor) const
-	{
-		return Value >= 0 ? Value / Divisor : -((-Value + Divisor - 1) / Divisor);
-	}
-
 	const UWorld* World;
 
 	const int32 DefaultChunkSize = 1;

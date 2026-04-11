@@ -1,29 +1,12 @@
-﻿#pragma once
+#pragma once
 
 #include "CoreMinimal.h"
 #include "ChunkBase.h"
+#include "ChannelIndex.h"
 #include "StructUtils/InstancedStruct.h"
 #include "Chunk_DynamicData.generated.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogSChunkLocal, Log, All)
-
-struct FCellChannelKey
-{
-	FName ChannelName;
-	UScriptStruct* Type = nullptr;
-
-	void Serialize(FArchive& Ar);
-
-	friend bool operator==(const FCellChannelKey& Left, const FCellChannelKey& Right)
-	{
-		return Left.ChannelName == Right.ChannelName && Left.Type == Right.Type;
-	}
-};
-
-FORCEINLINE uint32 GetTypeHash(const FCellChannelKey& Key)
-{
-	return HashCombine(GetTypeHash(Key.ChannelName), GetTypeHash(Key.Type));
-}
 
 USTRUCT()
 struct SIMPLECHUNKSYSTEM_API FCellBaseInfo
@@ -250,10 +233,10 @@ public:
 
 		if (!HasChannel<TStruct>(Name, InCellPoint))
 		{
-			RegisterChannelLocation({Name, TStruct::StaticStruct()}, InCellPoint);
+			ChannelIndex.Register({Name, TStruct::StaticStruct()}, CellIndex(InCellPoint));
 		}
 
-		return Cells[InCellPoint].GetOrAddChannel<TStruct>(Name);
+		return Cells[CellIndex(InCellPoint)].GetOrAddChannel<TStruct>(Name);
 	}
 
 	FORCEINLINE FInstancedStruct& FindOrAddChannel(const FName Name, const FIntPoint& InCellPoint, UScriptStruct* Type)
@@ -262,10 +245,10 @@ public:
 
 		if (!HasChannel(Name, InCellPoint, Type))
 		{
-			RegisterChannelLocation({Name, Type}, InCellPoint);
+			ChannelIndex.Register({Name, Type}, CellIndex(InCellPoint));
 		}
 
-		return Cells[InCellPoint].GetOrAddChannel(Name, Type);
+		return Cells[CellIndex(InCellPoint)].GetOrAddChannel(Name, Type);
 	}
 
 	template <typename TStruct>
@@ -273,10 +256,10 @@ public:
 	{
 		TRACE_CPUPROFILER_EVENT_SCOPE(FChunk_DynamicData::Template_TryRemoveChannel)
 
-		const bool bRemoved = Cells[InCellPoint].RemoveChannel<TStruct>(Name);
+		const bool bRemoved = Cells[CellIndex(InCellPoint)].RemoveChannel<TStruct>(Name);
 		if (bRemoved)
 		{
-			UnregisterChannelLocation({Name, TStruct::StaticStruct()}, InCellPoint);
+			ChannelIndex.Unregister({Name, TStruct::StaticStruct()}, CellIndex(InCellPoint));
 		}
 
 		return bRemoved;
@@ -286,10 +269,10 @@ public:
 	{
 		TRACE_CPUPROFILER_EVENT_SCOPE(FChunk_DynamicData::TryRemoveChannel)
 
-		const bool bRemoved = Cells[InCellPoint].RemoveChannel(Name, Type);
+		const bool bRemoved = Cells[CellIndex(InCellPoint)].RemoveChannel(Name, Type);
 		if (bRemoved)
 		{
-			UnregisterChannelLocation({Name, Type}, InCellPoint);
+			ChannelIndex.Unregister({Name, Type}, CellIndex(InCellPoint));
 		}
 
 		return bRemoved;
@@ -300,14 +283,14 @@ public:
 	{
 		TRACE_CPUPROFILER_EVENT_SCOPE(FChunk_DynamicData::Template_HasChannel)
 
-		return Cells[InCellPoint].HasChannel<TStruct>(Name);
+		return Cells[CellIndex(InCellPoint)].HasChannel<TStruct>(Name);
 	}
 
 	FORCEINLINE bool HasChannel(const FName Name, const FIntPoint& InCellPoint, UScriptStruct* Type) const
 	{
 		TRACE_CPUPROFILER_EVENT_SCOPE(FChunk_DynamicData::HasChannel)
 
-		return Cells[InCellPoint].HasChannel(Name, Type);
+		return Cells[CellIndex(InCellPoint)].HasChannel(Name, Type);
 	}
 
 	template <typename TStruct>
@@ -324,46 +307,52 @@ public:
 
 	FORCEINLINE FInstancedStruct* FindChannel(const FName Name, const FIntPoint& InCellPoint, UScriptStruct* Type)
 	{
-		FCellDynamicInfo* const CellInfo = Cells.Find(InCellPoint);
-		if (!CellInfo)
+		const int32 Idx = CellIndex(InCellPoint);
+		if (Idx < 0 || Idx >= Cells.Num())
 		{
 			return nullptr;
 		}
 
-		return CellInfo->FindChannel(Name, Type);
+		return Cells[Idx].FindChannel(Name, Type);
 	}
 
 	FORCEINLINE const FInstancedStruct* FindChannel(const FName Name, const FIntPoint& InCellPoint,
 	                                                UScriptStruct* Type) const
 	{
-		const FCellDynamicInfo* const CellInfo = Cells.Find(InCellPoint);
-		if (!CellInfo)
+		const int32 Idx = CellIndex(InCellPoint);
+		if (Idx < 0 || Idx >= Cells.Num())
 		{
 			return nullptr;
 		}
 
-		return CellInfo->FindChannel(Name, Type);
+		return Cells[Idx].FindChannel(Name, Type);
 	}
 
-	FORCEINLINE const TMap<FCellChannelKey, TSet<FIntPoint>>& GetChannelIndex() const
+	FORCEINLINE const TChannelIndex<int32>& GetChannelIndex() const
 	{
 		return ChannelIndex;
+	}
+
+	FORCEINLINE FIntPoint CellPoint(int32 Index) const
+	{
+		return FIntPoint(GetTopLeft().X + Index / Height, GetTopLeft().Y + Index % Height);
+	}
+
+	FORCEINLINE int32 CellIndex(const FIntPoint& P) const
+	{
+		return (P.X - GetTopLeft().X) * Height + (P.Y - GetTopLeft().Y);
 	}
 
 	virtual void DrawDebug(const UWorld* World, const TFunction<FVector(const FIntPoint&)>& Convertor) const override;
 
 private:
-	void RegisterChannelLocation(const FCellChannelKey& Key, const FIntPoint& CellPoint);
-	void UnregisterChannelLocation(const FCellChannelKey& Key, const FIntPoint& CellPoint);
-
-	const TSet<FIntPoint>* FindChannelLocations(const FCellChannelKey& Key) const;
-	TSet<FIntPoint>* FindChannelLocations(const FCellChannelKey& Key);
-
 	void RebuildChannelIndex();
 
 private:
-	TMap<FIntPoint, FCellDynamicInfo> Cells;
-	TMap<FCellChannelKey, TSet<FIntPoint>> ChannelIndex;
+	TArray<FCellDynamicInfo> Cells;
+	TChannelIndex<int32> ChannelIndex;
+	int32 Width = 0;
+	int32 Height = 0;
 };
 
 template <typename TStruct, bool bConst>
@@ -379,10 +368,10 @@ class FChunk_DynamicData::TChannelIteratorRangeImpl
 	public:
 		FIterator() = default;
 
-		FIterator(OwnerType InOwner, const FCellChannelKey* InKey, const TArray<FIntPoint>* InLocations, int32 InIndex)
+		FIterator(OwnerType InOwner, const FCellChannelKey* InKey, const TArray<int32>* InIndices, int32 InIndex)
 			: Owner(InOwner)
 			  , Key(InKey)
-			  , Locations(InLocations)
+			  , Indices(InIndices)
 			  , Index(InIndex)
 		{
 		}
@@ -395,7 +384,7 @@ class FChunk_DynamicData::TChannelIteratorRangeImpl
 
 		bool operator==(const FIterator& Other) const
 		{
-			return Locations == Other.Locations && Index == Other.Index;
+			return Indices == Other.Indices && Index == Other.Index;
 		}
 
 		bool operator!=(const FIterator& Other) const
@@ -405,7 +394,7 @@ class FChunk_DynamicData::TChannelIteratorRangeImpl
 
 		bool IsValid() const
 		{
-			return Index < Locations->Num();
+			return Indices && Index < Indices->Num();
 		}
 
 		explicit operator bool() const
@@ -415,10 +404,11 @@ class FChunk_DynamicData::TChannelIteratorRangeImpl
 
 		FReturnType operator*() const
 		{
-			check(Locations && Key && Owner);
-			check(Index >= 0 && Index < Locations->Num());
+			check(Indices && Key && Owner);
+			check(Index >= 0 && Index < Indices->Num());
 
-			const FIntPoint& CellPoint = (*Locations)[Index];
+			const int32 CellIdx = (*Indices)[Index];
+			const FIntPoint CellPoint = Owner->CellPoint(CellIdx);
 
 			if constexpr (bConst)
 			{
@@ -437,61 +427,54 @@ class FChunk_DynamicData::TChannelIteratorRangeImpl
 	private:
 		OwnerType Owner = nullptr;
 		const FCellChannelKey* Key = nullptr;
-		const TArray<FIntPoint>* Locations = nullptr;
+		const TArray<int32>* Indices = nullptr;
 		int32 Index = 0;
 	};
 
 public:
-	TChannelIteratorRangeImpl(OwnerType InOwner, const FCellChannelKey& InKey, const TSet<FIntPoint>* InLocations)
+	TChannelIteratorRangeImpl(OwnerType InOwner, const FCellChannelKey& InKey, const TArray<int32>* InIndices)
 		: Owner(InOwner)
 		  , Key(InKey)
+		  , Indices(InIndices)
 	{
-		if (InLocations)
-		{
-			Locations.Reserve(InLocations->Num());
-			for (const FIntPoint& Location : *InLocations)
-			{
-				Locations.Emplace(Location);
-			}
-		}
 	}
 
 	FIterator begin() const
 	{
-		return FIterator(Owner, &Key, &Locations, 0);
+		return FIterator(Owner, &Key, Indices, 0);
 	}
 
 	FIterator end() const
 	{
-		return FIterator(Owner, &Key, &Locations, Locations.Num());
+		return FIterator(Owner, &Key, Indices, Indices ? Indices->Num() : 0);
 	}
 
 	bool IsEmpty() const
 	{
-		return Locations.Num() == 0;
+		return !Indices || Indices->Num() == 0;
 	}
 
 	int32 Num() const
 	{
-		return Locations.Num();
+		return Indices ? Indices->Num() : 0;
 	}
 
 private:
 	OwnerType Owner = nullptr;
 	FCellChannelKey Key;
-	TArray<FIntPoint> Locations;
+	const TArray<int32>* Indices = nullptr;
 };
 
 template <typename TStruct>
 FChunk_DynamicData::TChannelIteratorRange<TStruct> FChunk_DynamicData::IterateChannel(const FName Name)
 {
 	const FCellChannelKey Key{Name, TStruct::StaticStruct()};
-	return TChannelIteratorRangeImpl<TStruct, false>(this, Key, FindChannelLocations(Key));
+	return TChannelIteratorRangeImpl<TStruct, false>(this, Key, ChannelIndex.Find(Key));
 }
 
 template <typename TStruct>
 FChunk_DynamicData::TConstChannelIteratorRange<TStruct> FChunk_DynamicData::IterateChannel(const FName Name) const
 {
 	const FCellChannelKey Key{Name, TStruct::StaticStruct()};
-	return TChannelIteratorRangeImpl<TStruct, true>(this, Key, FindChannelLocations(Key));
+	return TChannelIteratorRangeImpl<TStruct, true>(this, Key, ChannelIndex.Find(Key));
 }

@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "ChunkSystem.h"
 #include "Chunk/Chunk_DynamicData.h"
@@ -116,7 +116,7 @@ public:
 
 		if (!HasChannel<TStruct>(Name, InGridPoint))
 		{
-			RegisterChannelLocation({Name, TStruct::StaticStruct()}, ChunkPoint);
+			ChannelIndex.Register({Name, TStruct::StaticStruct()}, ChunkPoint);
 		}
 
 		return this->Chunks[ChunkPoint]->template FindOrAddChannel<TStruct>(Name, InGridPoint);
@@ -139,7 +139,7 @@ public:
 
 		if (!HasChannel(Name, InGridPoint, Type))
 		{
-			RegisterChannelLocation({Name, Type}, ChunkPoint);
+			ChannelIndex.Register({Name, Type}, ChunkPoint);
 		}
 
 		return this->Chunks[ChunkPoint]->FindOrAddChannel(Name, InGridPoint, Type);
@@ -178,7 +178,7 @@ public:
 			{
 				if (!HasChannel<TStruct>(Name, Point))
 				{
-					RegisterChannelLocation({Name, TStruct::StaticStruct()}, ChunkPoint);
+					ChannelIndex.Register({Name, TStruct::StaticStruct()}, ChunkPoint);
 				}
 
 				Channels.Add(&this->Chunks[ChunkPoint]->template FindOrAddChannel<TStruct>(Name, Point));
@@ -220,7 +220,7 @@ public:
 			{
 				if (!HasChannel(Name, Point, Type))
 				{
-					RegisterChannelLocation({Name, Type}, ChunkPoint);
+					ChannelIndex.Register({Name, Type}, ChunkPoint);
 				}
 
 				Channels.Add(&this->Chunks[ChunkPoint]->FindOrAddChannel(Name, Point, Type));
@@ -323,7 +323,7 @@ public:
 		const bool bRemoved = this->Chunks[ChunkPoint]->template TryRemoveChannel<TStruct>(Name, InGridLocation);
 		if (bRemoved)
 		{
-			UnregisterChannelLocation({Name, TStruct::StaticStruct()}, ChunkPoint);
+			ChannelIndex.Unregister({Name, TStruct::StaticStruct()}, ChunkPoint);
 		}
 
 		return bRemoved;
@@ -350,7 +350,7 @@ public:
 		const bool bRemoved = this->Chunks[ChunkPoint]->TryRemoveChannel(Name, InGridLocation, Type);
 		if (bRemoved)
 		{
-			UnregisterChannelLocation({Name, Type}, ChunkPoint);
+			ChannelIndex.Unregister({Name, Type}, ChunkPoint);
 		}
 
 		return bRemoved;
@@ -392,7 +392,7 @@ public:
 			{
 				if (this->Chunks[ChunkPoint]->template TryRemoveChannel<TStruct>(Name, Point))
 				{
-					UnregisterChannelLocation(Key, ChunkPoint);
+					ChannelIndex.Unregister(Key, ChunkPoint);
 					bRemoved = true;
 				}
 			}
@@ -435,7 +435,7 @@ public:
 			{
 				if (this->Chunks[ChunkPoint]->TryRemoveChannel(Name, Point, Type))
 				{
-					UnregisterChannelLocation(Key, ChunkPoint);
+					ChannelIndex.Unregister(Key, ChunkPoint);
 					bRemoved = true;
 				}
 			}
@@ -575,16 +575,16 @@ public:
 	}
 
 	template <typename TStruct>
-	TSet<FIntPoint> const* FindChannelLocations(const FName Name) const
+	const TArray<FIntPoint>* FindChannelLocations(const FName Name) const
 	{
 		const FCellChannelKey Key{Name, TStruct::StaticStruct()};
-		return FindChannelLocations(Key);
+		return ChannelIndex.Find(Key);
 	}
 
-	TSet<FIntPoint> const* FindChannelLocations(const FName Name, UScriptStruct* Type) const
+	const TArray<FIntPoint>* FindChannelLocations(const FName Name, UScriptStruct* Type) const
 	{
 		const FCellChannelKey Key{Name, Type};
-		return FindChannelLocations(Key);
+		return ChannelIndex.Find(Key);
 	}
 
 	template <typename TStruct>
@@ -650,7 +650,7 @@ private:
 
 			FIterator(OwnerType InOwner,
 			          const FCellChannelKey* InKey,
-			          const TSet<FIntPoint>* InChunkPoints,
+			          const TArray<FIntPoint>* InChunkPoints,
 			          int32 InIndex)
 				: Owner(InOwner)
 				  , Key(InKey)
@@ -763,37 +763,33 @@ private:
 				return;
 			}
 
-			if (TSet<FIntPoint> const* Found = Owner->FindChannelLocations(Key);
-				Found && !Found->IsEmpty())
-			{
-				Locations = *Found;
-			}
+			ChunkLocations = Owner->ChannelIndex.Find(Key);
 		}
 
 		FIterator begin() const
 		{
-			return FIterator(Owner, &Key, &Locations, 0);
+			return FIterator(Owner, &Key, ChunkLocations, 0);
 		}
 
 		FIterator end() const
 		{
-			return FIterator(Owner, &Key, &Locations, TNumericLimits<int32>::Max());
+			return FIterator(Owner, &Key, ChunkLocations, TNumericLimits<int32>::Max());
 		}
 
 		bool IsEmpty() const
 		{
-			return Locations.Num() == 0;
+			return !ChunkLocations || ChunkLocations->Num() == 0;
 		}
 
 		int32 Num() const
 		{
-			return Locations.Num();
+			return ChunkLocations ? ChunkLocations->Num() : 0;
 		}
 
 	private:
 		OwnerType Owner = nullptr;
 		FCellChannelKey Key;
-		TSet<FIntPoint> Locations;
+		const TArray<FIntPoint>* ChunkLocations = nullptr;
 	};
 
 	bool TryRemoveChunkInternal(const FIntPoint& InChunkGridLocation)
@@ -814,55 +810,15 @@ private:
 
 	void RemoveChunkFromChannelIndex(const FChunk_DynamicData& Chunk)
 	{
-		for (const TPair<FCellChannelKey, TSet<FIntPoint>>& Entry : Chunk.GetChannelIndex())
+		for (const auto& Entry : Chunk.GetChannelIndex().GetIndex())
 		{
-			for (const FIntPoint& CellLocation : Entry.Value)
+			for (const int32 CellIdx : Entry.Value)
 			{
+				const FIntPoint CellLocation = Chunk.CellPoint(CellIdx);
 				const FIntPoint ChunkPoint = this->ConvertGlobalToChunkGrid(CellLocation);
-				UnregisterChannelLocation(Entry.Key, ChunkPoint);
+				ChannelIndex.Unregister(Entry.Key, ChunkPoint);
 			}
 		}
-	}
-
-	void RegisterChannelLocation(const FCellChannelKey& Key, const FIntPoint& InChunkPoint)
-	{
-		if (!Key.Type)
-		{
-			return;
-		}
-
-		ChannelIndex.FindOrAdd(Key).Emplace(InChunkPoint);
-	}
-
-	void UnregisterChannelLocation(const FCellChannelKey& Key, const FIntPoint& InChunkPoint)
-	{
-		if (!Key.Type)
-		{
-			return;
-		}
-
-		if (TSet<FIntPoint>* Locations = FindChannelLocations(Key);
-			Locations && Locations->Contains(InChunkPoint))
-		{
-			if (Locations->Num() - 1 == 0)
-			{
-				ChannelIndex.Remove(Key);
-			}
-			else
-			{
-				Locations->Remove(InChunkPoint);
-			}
-		}
-	}
-
-	TSet<FIntPoint> const* FindChannelLocations(const FCellChannelKey& Key) const
-	{
-		return ChannelIndex.Find(Key);
-	}
-
-	TSet<FIntPoint>* FindChannelLocations(const FCellChannelKey& Key)
-	{
-		return ChannelIndex.Find(Key);
 	}
 
 	void RebuildChannelIndex(const int32 ExpectedNumElements = 0)
@@ -876,17 +832,18 @@ private:
 				continue;
 			}
 
-			for (const TPair<FCellChannelKey, TSet<FIntPoint>>& Entry : ChunkPair.Value->GetChannelIndex())
+			for (const auto& Entry : ChunkPair.Value->GetChannelIndex().GetIndex())
 			{
-				for (const FIntPoint& Location : Entry.Value)
+				for (const int32 CellIdx : Entry.Value)
 				{
+					const FIntPoint Location = ChunkPair.Value->CellPoint(CellIdx);
 					const FIntPoint ChunkPoint = this->ConvertGlobalToChunkGrid(Location);
-					RegisterChannelLocation(Entry.Key, ChunkPoint);
+					ChannelIndex.Register(Entry.Key, ChunkPoint);
 				}
 			}
 		}
 	}
 
 private:
-	TMap<FCellChannelKey, TSet<FIntPoint>> ChannelIndex;
+	TChannelIndex<FIntPoint> ChannelIndex;
 };

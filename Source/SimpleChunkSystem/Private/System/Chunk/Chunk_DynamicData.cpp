@@ -1,4 +1,4 @@
-﻿#include "System/Chunk/Chunk_DynamicData.h"
+#include "System/Chunk/Chunk_DynamicData.h"
 
 #include "ChunkLogCategory.h"
 #include "Manager/ChunkManagerBase.h"
@@ -173,71 +173,46 @@ FChunk_DynamicData::FChunk_DynamicData(const FIntPoint& InTopLeft, const FIntPoi
 	const FIntPoint& TL = GetTopLeft();
 	const FIntPoint& BR = GetBottomRight();
 
-	const int32 Width = BR.X - TL.X + 1;
-	const int32 Height = BR.Y - TL.Y + 1;
+	Width = BR.X - TL.X + 1;
+	Height = BR.Y - TL.Y + 1;
 
 	check(Width > 0);
 	check(Height > 0);
 
-	Cells.Reserve(FMath::Max(Width, 0) * FMath::Max(Height, 0));
-
-	for (int32 X = TL.X; X <= BR.X; ++X)
-	{
-		for (int32 Y = TL.Y; Y <= BR.Y; ++Y)
-		{
-			Cells.Emplace(FIntPoint{X, Y});
-		}
-	}
-
-	Cells.Shrink();
+	Cells.SetNum(Width * Height);
 }
 
 void FChunk_DynamicData::Serialize(FArchive& Ar)
 {
 	Super::Serialize(Ar);
 
-	int32 Count = Cells.Num();
-	Ar << Count;
+	Ar << Width;
+	Ar << Height;
 
-	if (Count < 0)
+	if (Width <= 0 || Height <= 0)
 	{
-		SCHUNK_LOG(LogSChunkLocal, Warning, TEXT("Can't serialize FChunk_DynamicData, %d < 0 in chunk at %s"), Count,
-		           *GetTopLeft().ToString());
+		SCHUNK_LOG(LogSChunkLocal, Warning, TEXT("Can't serialize FChunk_DynamicData, invalid dimensions %dx%d in chunk at %s"),
+		           Width, Height, *GetTopLeft().ToString());
 		return;
 	}
 
-	if (Count == 0)
-	{
-		Cells.Empty();
-		ChannelIndex.Empty();
-		return;
-	}
+	const int32 Count = Width * Height;
 
 	if (Ar.IsLoading())
 	{
-		Cells.Empty(Count);
+		Cells.SetNum(Count);
 
 		for (int32 Index = 0; Index < Count; ++Index)
 		{
-			FIntPoint Key;
-			Ar << Key;
-
-			FCellDynamicInfo Value;
-			Value.Serialize(Ar);
-
-			Cells.Add(Key, Value);
+			Cells[Index].Serialize(Ar);
 		}
 	}
 
 	if (Ar.IsSaving())
 	{
-		for (TPair<FIntPoint, FCellDynamicInfo>& Iter : Cells)
+		for (int32 Index = 0; Index < Count; ++Index)
 		{
-			FIntPoint& Key = Iter.Key;
-			FCellDynamicInfo& Value = Iter.Value;
-
-			Ar << Key;
-			Value.Serialize(Ar);
+			Cells[Index].Serialize(Ar);
 		}
 	}
 
@@ -248,54 +223,19 @@ void FChunk_DynamicData::DrawDebug(const UWorld* World, const TFunction<FVector(
 {
 	Super::DrawDebug(World, Convertor);
 
-	for (const TPair<FIntPoint, FCellDynamicInfo>& Cell : Cells)
+	for (int32 Index = 0; Index < Cells.Num(); ++Index)
 	{
-		Cell.Value.DrawDebug(World, Convertor(Cell.Key));
+		Cells[Index].DrawDebug(World, Convertor(CellPoint(Index)));
 	}
-}
-
-void FChunk_DynamicData::RegisterChannelLocation(const FCellChannelKey& Key, const FIntPoint& CellPoint)
-{
-	if (!Key.Type)
-	{
-		return;
-	}
-
-	TSet<FIntPoint>& Locations = ChannelIndex.FindOrAdd(Key);
-	Locations.Add(CellPoint);
-}
-
-void FChunk_DynamicData::UnregisterChannelLocation(const FCellChannelKey& Key, const FIntPoint& CellPoint)
-{
-	if (TSet<FIntPoint>* const Locations = ChannelIndex.Find(Key))
-	{
-		Locations->Remove(CellPoint);
-
-		if (Locations->Num() == 0)
-		{
-			ChannelIndex.Remove(Key);
-		}
-	}
-}
-
-const TSet<FIntPoint>* FChunk_DynamicData::FindChannelLocations(const FCellChannelKey& Key) const
-{
-	return ChannelIndex.Find(Key);
-}
-
-TSet<FIntPoint>* FChunk_DynamicData::FindChannelLocations(const FCellChannelKey& Key)
-{
-	return ChannelIndex.Find(Key);
 }
 
 void FChunk_DynamicData::RebuildChannelIndex()
 {
 	ChannelIndex.Empty();
 
-	for (const TPair<FIntPoint, FCellDynamicInfo>& Cell : Cells)
+	for (int32 Index = 0; Index < Cells.Num(); ++Index)
 	{
-		const FIntPoint& CellPoint = Cell.Key;
-		const FCellDynamicInfo& CellInfo = Cell.Value;
+		const FCellDynamicInfo& CellInfo = Cells[Index];
 
 		for (const TPair<FCellChannelKey, TOptional<FInstancedStruct>>& Channel : CellInfo.GetChannels())
 		{
@@ -304,7 +244,7 @@ void FChunk_DynamicData::RebuildChannelIndex()
 				continue;
 			}
 
-			RegisterChannelLocation(Channel.Key, CellPoint);
+			ChannelIndex.Register(Channel.Key, Index);
 		}
 	}
 }

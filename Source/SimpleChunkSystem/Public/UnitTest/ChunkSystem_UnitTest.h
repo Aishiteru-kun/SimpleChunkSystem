@@ -26,40 +26,16 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FChunk_DivFloorTest,
 
 FORCEINLINE bool FChunk_DivFloorTest::RunTest(const FString& Parameters)
 {
-	TestNotNull(TEXT("GEngine is valid"), GEngine);
-	if (!GEngine)
-	{
-		return false;
-	}
-
-	const TIndirectArray<FWorldContext>& Contexts = GEngine->GetWorldContexts();
-	TestTrue(TEXT("Contexts are valid"), !Contexts.IsEmpty());
-	if (Contexts.IsEmpty())
-	{
-		return false;
-	}
-
-	const UWorld* World = Contexts[0].World();
-	TestNotNull(TEXT("World is valid"), World);
-	if (!World)
-	{
-		return false;
-	}
-
 	constexpr int32 ChunkSize = 7;
-	const TChunkSystemBase<FChunk_DynamicData>* ChunkSystem = new TChunkSystemBase<
-		FChunk_DynamicData>(World, ChunkSize);
 
-	TestEqual(TEXT("0/7"), ChunkSystem->DivFloor(0, ChunkSize), 0);
-	TestEqual(TEXT("1/7"), ChunkSystem->DivFloor(1, ChunkSize), 0);
-	TestEqual(TEXT("6/7"), ChunkSystem->DivFloor(6, ChunkSize), 0);
-	TestEqual(TEXT("7/7"), ChunkSystem->DivFloor(7, ChunkSize), 1);
+	TestEqual(TEXT("0/7"), ChunkMath::DivFloor(0, ChunkSize), 0);
+	TestEqual(TEXT("1/7"), ChunkMath::DivFloor(1, ChunkSize), 0);
+	TestEqual(TEXT("6/7"), ChunkMath::DivFloor(6, ChunkSize), 0);
+	TestEqual(TEXT("7/7"), ChunkMath::DivFloor(7, ChunkSize), 1);
 
-	TestEqual(TEXT("-1/7"), ChunkSystem->DivFloor(-1, ChunkSize), -1);
-	TestEqual(TEXT("-7/7"), ChunkSystem->DivFloor(-7, ChunkSize), -1);
-	TestEqual(TEXT("-8/7"), ChunkSystem->DivFloor(-8, ChunkSize), -2);
-
-	delete ChunkSystem;
+	TestEqual(TEXT("-1/7"), ChunkMath::DivFloor(-1, ChunkSize), -1);
+	TestEqual(TEXT("-7/7"), ChunkMath::DivFloor(-7, ChunkSize), -1);
+	TestEqual(TEXT("-8/7"), ChunkMath::DivFloor(-8, ChunkSize), -2);
 
 	return true;
 }
